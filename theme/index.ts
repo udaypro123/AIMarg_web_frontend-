@@ -84,13 +84,12 @@ export const theme = createTheme({
       900: "#064e3b",
     },
     background: {
-      default: "#f8fafc",
+      default: "#ffffff",
       paper: "#ffffff",
     },
   },
   typography: {
-    fontFamily:
-      'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     h1: {
       fontSize: "2.5rem",
       fontWeight: 700,

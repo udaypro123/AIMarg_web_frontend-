@@ -2,14 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Typography, Stack, TextField, IconButton, InputAdornment } from "@mui/material";
+import { Box, Typography, Stack, TextField, IconButton, InputAdornment, Card, CardContent } from "@mui/material";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import EmailIcon from "@mui/icons-material/Email";
 import LockIcon from "@mui/icons-material/Lock";
 import Link from "next/link";
-import { AuthContainer } from "@/components/layout/AuthContainer";
-import { PrimaryButton, SecondaryButton } from "@/components/common/Buttons";
+import { PrimaryButton } from "@/components/common/Buttons";
 import { login } from "@/services/auth.service";
 import { useToast } from "@/components/common/Toast";
 
@@ -33,6 +32,8 @@ export default function LoginPage() {
       if (res.success) {
         toast({ title: "Welcome back!", severity: "success" });
         router.push("/");
+      } else {
+        setError(res.message || "Invalid credentials");
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Invalid credentials");
@@ -44,7 +45,7 @@ export default function LoginPage() {
   const emailSlotProps = {
     startAdornment: (
       <InputAdornment position="start">
-        <EmailIcon fontSize="small" />
+        <EmailIcon fontSize="small" color="disabled" />
       </InputAdornment>
     ),
   };
@@ -52,12 +53,12 @@ export default function LoginPage() {
   const passwordSlotProps = {
     startAdornment: (
       <InputAdornment position="start">
-        <LockIcon fontSize="small" />
+        <LockIcon fontSize="small" color="disabled" />
       </InputAdornment>
     ),
     endAdornment: (
       <InputAdornment position="end">
-        <IconButton onClick={() => setShowPassword((v) => !v)} edge="end" size="small">
+        <IconButton onClick={() => setShowPassword((v) => !v)} edge="end" size="small" color="inherit">
           {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
         </IconButton>
       </InputAdornment>
@@ -65,68 +66,70 @@ export default function LoginPage() {
   };
 
   return (
-    <AuthContainer>
+    <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "calc(100vh - 200px)", py: 4, width: "100%" }}>
       <ToastContainer />
-      <Stack spacing={2.5}>
-        <Box sx={{ textAlign: "center" }}>
-          <Typography variant="h5" sx={{ fontWeight: 700 }}>
-            Welcome back
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Sign in to your AIMarg account
-          </Typography>
-        </Box>
-
-        {error && (
-          <Typography variant="body2" color="error.main">
-            {error}
-          </Typography>
-        )}
-
-        <Box component="form" onSubmit={handleSubmit}>
-          <Stack spacing={2}>
-            <TextField
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              fullWidth
-              slotProps={{ input: emailSlotProps }}
-            />
-            <TextField
-              label="Password"
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              fullWidth
-              slotProps={{ input: passwordSlotProps }}
-            />
-            <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-              <Link href="/auth/forgot-password">
-                <Typography variant="body2" color="primary" sx={{ cursor: "pointer" }}>
-                  Forgot password?
-                </Typography>
-              </Link>
-            </Box>
-            <PrimaryButton type="submit" fullWidth loading={loading}>
-              Sign in
-            </PrimaryButton>
-          </Stack>
-        </Box>
-
-        <Stack spacing={0.5} sx={rowCenterStyle}>
-          <Typography variant="body2" color="text.secondary">
-            Do not have an account?
-          </Typography>
-          <Link href="/auth/register">
-            <Typography variant="body2" sx={{ fontWeight: 600, cursor: "pointer" }}>
-              Sign up
+      <Card sx={{ width: "100%", maxWidth: 420, boxShadow: "0px 4px 20px rgba(0,0,0,0.08)", border: "1px solid", borderColor: "divider" }}>
+        <CardContent sx={{ p: 4 }}>
+          <Box sx={{ textAlign: "center", mb: 3 }}>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary" }}>
+              Welcome back
             </Typography>
-          </Link>
-        </Stack>
-      </Stack>
-    </AuthContainer>
+            <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
+              Sign in to your AIMarg account
+            </Typography>
+          </Box>
+
+          {error && (
+            <Typography variant="body2" color="error.main" sx={{ display: "block", mb: 2, textAlign: "center" }}>
+              {error}
+            </Typography>
+          )}
+
+          <Box component="form" onSubmit={handleSubmit}>
+            <Stack spacing={2}>
+              <TextField
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                fullWidth
+                slotProps={{ input: emailSlotProps }}
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 12 } }}
+              />
+              <TextField
+                label="Password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                fullWidth
+                slotProps={{ input: passwordSlotProps }}
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 12 } }}
+              />
+              <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                <Link href="/auth/forgot-password" style={{ textDecoration: "none" }}>
+                  <Typography variant="body2" color="primary" sx={{ cursor: "pointer", fontWeight: 500 }}>
+                    Forgot password?
+                  </Typography>
+                </Link>
+              </Box>
+              <PrimaryButton type="submit" fullWidth loading={loading} size="large">
+                Sign in
+              </PrimaryButton>
+            </Stack>
+          </Box>
+
+          <Box sx={{ mt: 3, textAlign: "center" }}>
+            <Typography variant="body2" color="text.secondary">
+              Do not have an account?{" "}
+              <Link href="/auth/register" style={{ color: "primary.main", fontWeight: 600, textDecoration: "none" }}>
+                Sign up
+              </Link>
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
+    </Box>
   );
 }
