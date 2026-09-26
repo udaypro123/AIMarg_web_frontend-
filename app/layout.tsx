@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import RootLayoutClient from "@/components/layout/RootLayoutClient";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "AIMarg - Track the Changing World of Work",
@@ -8,8 +9,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-mui-color-scheme="light" suppressHydrationWarning style={{ fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
-      <body style={{ margin: 0, minHeight: "100vh", display: "flex", flexDirection: "column", backgroundColor: "#ffffff" }}>
+    <html lang="en" data-mui-color-scheme="light" suppressHydrationWarning>
+      <body>
         <RootLayoutClient>{children}</RootLayoutClient>
       </body>
     </html>

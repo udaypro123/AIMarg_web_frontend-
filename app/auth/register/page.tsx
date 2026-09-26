@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Typography, Stack, TextField, IconButton, InputAdornment, Card, CardContent } from "@mui/material";
+import { Alert, Box, Typography, Stack, TextField, IconButton, InputAdornment } from "@mui/material";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import EmailIcon from "@mui/icons-material/Email";
@@ -12,6 +12,7 @@ import Link from "next/link";
 import { PrimaryButton } from "@/components/common/Buttons";
 import { register } from "@/services/auth.service";
 import { useToast } from "@/components/common/Toast";
+import AuthScreen from "@/components/layout/AuthScreen";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -66,7 +67,7 @@ export default function RegisterPage() {
     ),
     endAdornment: (
       <InputAdornment position="end">
-        <IconButton onClick={() => setShowPassword((v) => !v)} edge="end" size="small" color="inherit">
+        <IconButton onClick={() => setShowPassword((v) => !v)} edge="end" size="small" color="inherit" aria-label={showPassword ? "Hide password" : "Show password"}>
           {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
         </IconButton>
       </InputAdornment>
@@ -74,72 +75,53 @@ export default function RegisterPage() {
   };
 
   return (
-    <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "calc(100vh - 200px)", py: 4, width: "100%" }}>
+    <>
       <ToastContainer />
-      <Card sx={{ width: "100%", maxWidth: 420, boxShadow: "0px 4px 20px rgba(0,0,0,0.08)", border: "1px solid", borderColor: "divider" }}>
-        <CardContent sx={{ p: 4 }}>
-          <Box sx={{ textAlign: "center", mb: 3 }}>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: "text.primary" }}>
-              Create account
-            </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
-              Start tracking your career changes
-            </Typography>
-          </Box>
-
-          {error && (
-            <Typography variant="body2" color="error.main" sx={{ display: "block", mb: 2, textAlign: "center" }}>
-              {error}
-            </Typography>
-          )}
-
-          <Box component="form" onSubmit={handleSubmit}>
-            <Stack spacing={2}>
+      <AuthScreen eyebrow="START HERE" title="Create your account" subtitle="Build a clearer picture of your work and what comes next.">
+        <Stack spacing={2.1} className="auth-form-stack">
+          {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
+          <Box component="form" onSubmit={handleSubmit} className="auth-form">
+            <Stack spacing={1.8}>
               <TextField
                 label="Full name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(event) => setName(event.target.value)}
                 required
                 fullWidth
+                autoComplete="name"
                 slotProps={{ input: nameSlotProps }}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 12 } }}
               />
               <TextField
-                label="Email"
+                label="Email address"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(event) => setEmail(event.target.value)}
                 required
                 fullWidth
+                autoComplete="email"
                 slotProps={{ input: emailSlotProps }}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 12 } }}
               />
               <TextField
                 label="Password"
                 type={showPassword ? "text" : "password"}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(event) => setPassword(event.target.value)}
                 required
                 fullWidth
-                slotProps={{ input: passwordSlotProps }}
-                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 12 } }}
+                slotProps={{ input: passwordSlotProps, htmlInput: { minLength: 8, autoComplete: "new-password" } }}
+                helperText="Use at least 8 characters."
               />
-              <PrimaryButton type="submit" fullWidth loading={loading} size="large">
+              <PrimaryButton type="submit" fullWidth loading={loading} size="large" className="auth-submit-button">
                 Create account
               </PrimaryButton>
             </Stack>
           </Box>
-
-          <Box sx={{ mt: 3, textAlign: "center" }}>
-            <Typography variant="body2" color="text.secondary">
-              Already have an account?{" "}
-              <Link href="/auth/login" style={{ color: "primary.main", fontWeight: 600, textDecoration: "none" }}>
-                Sign in
-              </Link>
-            </Typography>
+          <Box className="auth-switch">
+            <Typography variant="body2">Already have an account?</Typography>
+            <Link href="/auth/login">Sign in <span aria-hidden="true">&#8594;</span></Link>
           </Box>
-        </CardContent>
-      </Card>
-    </Box>
+        </Stack>
+      </AuthScreen>
+    </>
   );
 }

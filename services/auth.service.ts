@@ -1,11 +1,10 @@
-import apiClient from "./api";
+import apiClient, { setAccessToken } from "./api";
 import type { AuthResponse, ApiResponse, User } from "@/types/api";
 
 export async function login(email: string, password: string) {
   const { data } = await apiClient.post<AuthResponse>("/auth/login", { email, password });
   if (data.success && data.data.accessToken) {
-    localStorage.setItem("accessToken", data.data.accessToken);
-    localStorage.setItem("refreshToken", data.data.refreshToken);
+    setAccessToken(data.data.accessToken);
   }
   return data;
 }
@@ -19,8 +18,7 @@ export async function register(payload: {
 }) {
   const { data } = await apiClient.post<AuthResponse>("/auth/register", payload);
   if (data.success && data.data.accessToken) {
-    localStorage.setItem("accessToken", data.data.accessToken);
-    localStorage.setItem("refreshToken", data.data.refreshToken);
+    setAccessToken(data.data.accessToken);
   }
   return data;
 }
@@ -40,20 +38,20 @@ export async function verifyEmail(token: string) {
   return data;
 }
 
-export async function refreshTokenRequest(refreshToken: string) {
-  const { data } = await apiClient.post<AuthResponse>("/auth/refresh", { refreshToken });
+export async function refreshTokenRequest() {
+  const { data } = await apiClient.post<AuthResponse>("/auth/refresh");
   if (data.success && data.data.accessToken) {
-    localStorage.setItem("accessToken", data.data.accessToken);
-    localStorage.setItem("refreshToken", data.data.refreshToken);
+    setAccessToken(data.data.accessToken);
   }
   return data;
 }
 
 export async function logout() {
-  const refreshToken = localStorage.getItem("refreshToken");
-  await apiClient.post("/auth/logout", { refreshToken });
-  localStorage.removeItem("accessToken");
-  localStorage.removeItem("refreshToken");
+  try {
+    await apiClient.post("/auth/logout");
+  } finally {
+    setAccessToken(null);
+  }
 }
 
 export async function getMe() {

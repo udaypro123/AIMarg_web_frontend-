@@ -115,7 +115,7 @@ export default function Navbar({ right }: NavbarProps) {
                     alignItems: "center",
                     justifyContent: "center",
                     background:
-                      "linear-gradient(135deg, #2563EB 0%, #4F46E5 55%, #7C3AED 100%)",
+                      "radial-gradient(circle, rgba(9, 9, 121, 1) 0%, rgba(55, 55, 196, 1) 50%, rgba(9, 9, 121, 1) 100%)",
                     color: "#fff",
                     fontWeight: 800,
                     fontSize: "1rem",
@@ -305,7 +305,7 @@ export default function Navbar({ right }: NavbarProps) {
                     alignItems: "center",
                     justifyContent: "center",
                     background:
-                      "linear-gradient(135deg, #2563EB 0%, #4F46E5 55%, #7C3AED 100%)",
+                      "radial-gradient(circle, rgba(9, 9, 121, 1) 0%, rgba(55, 55, 196, 1) 50%, rgba(9, 9, 121, 1) 100%)",
                     color: "#fff",
                     fontWeight: 800,
                   }}
