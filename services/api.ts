@@ -60,7 +60,7 @@ apiClient.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config as TrackedRequestConfig | undefined;
-    const isAuthRequest = /\/auth\/(login|register|refresh|logout|forgot-password|reset-password)/.test(
+    const isAuthRequest = /\/auth\/(login|register|google|refresh|logout|forgot-password|reset-password)/.test(
       originalRequest?.url ?? ""
     );
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthRequest) {

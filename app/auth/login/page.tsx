@@ -2,16 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Alert, Box, Typography, Stack, TextField, IconButton, InputAdornment } from "@mui/material";
+import { Alert, Box, Typography, Stack, TextField, IconButton, InputAdornment, Divider } from "@mui/material";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import EmailIcon from "@mui/icons-material/Email";
 import LockIcon from "@mui/icons-material/Lock";
 import Link from "next/link";
 import { PrimaryButton } from "@/components/common/Buttons";
-import { login } from "@/services/auth.service";
+import { googleLogin, login } from "@/services/auth.service";
 import { useToast } from "@/components/common/Toast";
 import AuthScreen from "@/components/layout/AuthScreen";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,6 +21,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,6 +40,20 @@ export default function LoginPage() {
       setError(err instanceof Error ? err.message : "Invalid credentials");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleCredential = async (idToken: string) => {
+    setError("");
+    setGoogleLoading(true);
+    try {
+      const res = await googleLogin(idToken);
+      toast({ title: "Welcome back!", severity: "success" });
+      router.push(res.data.isNewUser ? "/onboarding" : "/");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Google sign-in failed");
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -100,6 +116,13 @@ export default function LoginPage() {
               </PrimaryButton>
             </Stack>
           </Box>
+          <Divider>or continue with</Divider>
+          <GoogleSignInButton
+            disabled={loading || googleLoading}
+            mode="signin"
+            onCredential={handleGoogleCredential}
+            onError={setError}
+          />
           <Box className="auth-switch">
             <Typography variant="body2">New to AIMarg?</Typography>
             <Link href="/auth/register">Create an account <span aria-hidden="true">&#8594;</span></Link>

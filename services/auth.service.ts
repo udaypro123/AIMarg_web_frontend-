@@ -9,6 +9,17 @@ export async function login(email: string, password: string) {
   return data;
 }
 
+export async function googleLogin(idToken: string) {
+  const { data } = await apiClient.post<AuthResponse & { data: AuthResponse["data"] & { isNewUser: boolean } }>(
+    "/auth/google",
+    { idToken }
+  );
+  if (data.success && data.data.accessToken) {
+    setAccessToken(data.data.accessToken);
+  }
+  return data;
+}
+
 export async function register(payload: {
   name: string;
   email: string;

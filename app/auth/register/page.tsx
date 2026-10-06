@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Alert, Box, Typography, Stack, TextField, IconButton, InputAdornment } from "@mui/material";
+import { Alert, Box, Typography, Stack, TextField, IconButton, InputAdornment, Divider } from "@mui/material";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import EmailIcon from "@mui/icons-material/Email";
@@ -10,9 +10,10 @@ import LockIcon from "@mui/icons-material/Lock";
 import PersonIcon from "@mui/icons-material/Person";
 import Link from "next/link";
 import { PrimaryButton } from "@/components/common/Buttons";
-import { register } from "@/services/auth.service";
+import { googleLogin, register } from "@/services/auth.service";
 import { useToast } from "@/components/common/Toast";
 import AuthScreen from "@/components/layout/AuthScreen";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,6 +42,20 @@ export default function RegisterPage() {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleCredential = async (idToken: string) => {
+    setError("");
+    setGoogleLoading(true);
+    try {
+      const res = await googleLogin(idToken);
+      toast({ title: res.data.isNewUser ? "Account created!" : "Welcome back!", severity: "success" });
+      router.push(res.data.isNewUser ? "/onboarding" : "/");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Google sign-up failed");
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -116,6 +132,13 @@ export default function RegisterPage() {
               </PrimaryButton>
             </Stack>
           </Box>
+          <Divider>or sign up with</Divider>
+          <GoogleSignInButton
+            disabled={loading || googleLoading}
+            mode="signup"
+            onCredential={handleGoogleCredential}
+            onError={setError}
+          />
           <Box className="auth-switch">
             <Typography variant="body2">Already have an account?</Typography>
             <Link href="/auth/login">Sign in <span aria-hidden="true">&#8594;</span></Link>
