@@ -1,22 +1,31 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Alert, Avatar, Box, Button, CircularProgress, Divider, Paper, Stack, TextField, Typography } from "@mui/material";
+import { useRouter } from "next/navigation";
+import { Alert, Avatar, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, FormControlLabel, Paper, Stack, Switch, TextField, Typography } from "@mui/material";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
-import { downloadResume, getProfile, updateProfile, uploadResume } from "@/services/user.service";
+import DeleteForeverRoundedIcon from "@mui/icons-material/DeleteForeverRounded";
+import { deleteMyAccount, downloadResume, getProfile, updateProfile, uploadResume } from "@/services/user.service";
+import { setAccessToken } from "@/services/api";
 import type { User } from "@/types/api";
 
 export default function ProfilePage() {
+  const router = useRouter();
   const [profile, setProfile] = useState<User | null>(null);
   const [initialProfile, setInitialProfile] = useState<User | null>(null);
+  const [skillsInput, setSkillsInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -26,6 +35,7 @@ export default function ProfilePage() {
         if (!active) return;
         setProfile(data);
         setInitialProfile(data);
+        setSkillsInput((data.skills || []).join(", "));
       })
       .catch(() => {
         if (active) setError("Your profile could not be loaded. Please refresh and try again.");
@@ -45,20 +55,52 @@ export default function ProfilePage() {
 
   const saveProfile = async () => {
     if (!profile) return;
+    const requiredFields: Array<[string, string | undefined]> = [
+      ["Full name", profile.name],
+      ["Country", profile.country],
+      ["Experience", profile.experience],
+      ["Current role", profile.currentRole],
+      ["Previous role", profile.previousRole],
+      ["Previous company", profile.previousCompany],
+      ["Company", profile.company],
+      ["Job description", profile.jobDescription],
+      ["LinkedIn URL", profile.linkedinUrl],
+      ["GitHub URL", profile.githubUrl],
+      ["Resume", profile.resume],
+    ];
+    const missingFields = requiredFields
+      .filter(([, value]) => !value?.trim())
+      .map(([label]) => label);
+    const skills = skillsInput.split(",").map((skill) => skill.trim()).filter(Boolean);
+    if (skills.length === 0) missingFields.push("Skills");
+    if (missingFields.length > 0) {
+      setError(`Complete all required fields: ${missingFields.join(", ")}.`);
+      return;
+    }
+    const invalidUrls = [
+      ["LinkedIn URL", profile.linkedinUrl],
+      ["GitHub URL", profile.githubUrl],
+    ].filter(([, value]) => {
+      try {
+        const url = new URL(value!);
+        return url.protocol !== "https:" && url.protocol !== "http:";
+      } catch {
+        return true;
+      }
+    }).map(([label]) => label);
+    if (invalidUrls.length > 0) {
+      setError(`Enter a valid HTTP or HTTPS URL for: ${invalidUrls.join(", ")}.`);
+      return;
+    }
     setSaving(true);
     setError("");
     try {
       const updated = await updateProfile({
         name: profile.name,
         country: profile.country,
-        profession: profile.profession,
-        industry: profile.industry,
         experience: profile.experience,
-        employmentStatus: profile.employmentStatus,
-        skills: profile.skills || [],
-        careerGoal: profile.careerGoal,
+        skills,
         aiUsage: profile.aiUsage,
-        mobile: profile.mobile,
         currentRole: profile.currentRole,
         previousRole: profile.previousRole,
         previousCompany: profile.previousCompany,
@@ -69,6 +111,7 @@ export default function ProfilePage() {
       });
       setProfile(updated);
       setInitialProfile(updated);
+      setSkillsInput((updated.skills || []).join(", "));
       setSaved(true);
     } catch {
       setError("Your changes could not be saved. Please try again.");
@@ -110,7 +153,70 @@ export default function ProfilePage() {
     }
   };
 
-  const hasChanges = Boolean(profile && initialProfile && JSON.stringify(profile) !== JSON.stringify(initialProfile));
+  const saveAccountSettings = async () => {
+    if (!profile) return;
+    setSettingsSaving(true);
+    setError("");
+    try {
+      const updated = await updateProfile({
+        privacySettings: {
+          profileDiscoverable: profile.privacySettings?.profileDiscoverable ?? true,
+        },
+        notificationPreferences: {
+          email: profile.notificationPreferences?.email ?? true,
+          sms: profile.notificationPreferences?.sms ?? false,
+          whatsapp: profile.notificationPreferences?.whatsapp ?? false,
+        },
+      });
+      setProfile((current) => current ? {
+        ...current,
+        privacySettings: updated.privacySettings,
+        notificationPreferences: updated.notificationPreferences,
+      } : updated);
+      setInitialProfile((current) => current ? {
+        ...current,
+        privacySettings: updated.privacySettings,
+        notificationPreferences: updated.notificationPreferences,
+      } : updated);
+    } catch {
+      setError("Your privacy and notification settings could not be saved. Please try again.");
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmation !== "DELETE") return;
+    setDeletingAccount(true);
+    setError("");
+    try {
+      await deleteMyAccount();
+      setAccessToken(null);
+      router.replace("/auth/login");
+    } catch {
+      setError("Your account could not be deleted. Please try again.");
+      setDeletingAccount(false);
+      setDeleteDialogOpen(false);
+      setDeleteConfirmation("");
+    }
+  };
+
+  const hasChanges = Boolean(profile && initialProfile && JSON.stringify({
+    ...profile,
+    privacySettings: undefined,
+    notificationPreferences: undefined,
+  }) !== JSON.stringify({
+    ...initialProfile,
+    privacySettings: undefined,
+    notificationPreferences: undefined,
+  }));
+  const hasAccountSettingsChanges = Boolean(profile && initialProfile && (
+    (profile.privacySettings?.profileDiscoverable ?? true) !== (initialProfile.privacySettings?.profileDiscoverable ?? true) ||
+    (profile.notificationPreferences?.email ?? true) !== (initialProfile.notificationPreferences?.email ?? true) ||
+    (profile.notificationPreferences?.sms ?? false) !== (initialProfile.notificationPreferences?.sms ?? false) ||
+    (profile.notificationPreferences?.whatsapp ?? false) !== (initialProfile.notificationPreferences?.whatsapp ?? false)
+  ));
+  const hasSkillsChanges = Boolean(initialProfile && skillsInput !== (initialProfile.skills || []).join(", "));
 
   return (
     <Stack spacing={3}>
@@ -136,10 +242,9 @@ export default function ProfilePage() {
                   </Box>
                 </Box>
                 <Box className="profile-form-grid">
-                  <TextField label="Full name" value={profile.name || ""} onChange={(event) => updateField("name", event.target.value)} fullWidth />
-                  <TextField label="Email address" value={profile.email || ""} disabled fullWidth helperText="Email address is managed by your sign-in settings." />
-                  <TextField label="Phone number" value={profile.mobile || ""} onChange={(event) => updateField("mobile", event.target.value)} fullWidth />
-                  <TextField label="Country" value={profile.country || ""} onChange={(event) => updateField("country", event.target.value)} fullWidth />
+                  <TextField label="Full name" value={profile.name || ""} onChange={(event) => updateField("name", event.target.value)} required fullWidth />
+                  <TextField label="Email address" value={profile.email || ""} disabled required fullWidth helperText="Email address is managed by your sign-in settings." />
+                  <TextField label="Country" value={profile.country || ""} onChange={(event) => updateField("country", event.target.value)} required fullWidth />
                 </Box>
               </Paper>
 
@@ -151,19 +256,19 @@ export default function ProfilePage() {
                   </Box>
                 </Box>
                 <Box className="profile-form-grid">
-                  <TextField label="Current role" value={profile.currentRole || ""} onChange={(event) => updateField("currentRole", event.target.value)} fullWidth />
-                  <TextField label="Company" value={profile.company || ""} onChange={(event) => updateField("company", event.target.value)} fullWidth />
-                  <TextField label="Profession" value={profile.profession || ""} onChange={(event) => updateField("profession", event.target.value)} fullWidth />
-                  <TextField label="Industry" value={profile.industry || ""} onChange={(event) => updateField("industry", event.target.value)} fullWidth />
-                  <TextField label="Experience" value={profile.experience || ""} onChange={(event) => updateField("experience", event.target.value)} fullWidth />
-                  <TextField label="Employment status" value={profile.employmentStatus || ""} onChange={(event) => updateField("employmentStatus", event.target.value)} fullWidth />
-                  <TextField label="Previous role" value={profile.previousRole || ""} onChange={(event) => updateField("previousRole", event.target.value)} fullWidth />
-                  <TextField label="Previous company" value={profile.previousCompany || ""} onChange={(event) => updateField("previousCompany", event.target.value)} fullWidth />
-                  <TextField label="Career goal" value={profile.careerGoal || ""} onChange={(event) => updateField("careerGoal", event.target.value)} fullWidth />
+                  <TextField label="Current role" value={profile.currentRole || ""} onChange={(event) => updateField("currentRole", event.target.value)} required fullWidth />
+                  <TextField label="Company" value={profile.company || ""} onChange={(event) => updateField("company", event.target.value)} required fullWidth />
+                  <TextField label="Experience" value={profile.experience || ""} onChange={(event) => updateField("experience", event.target.value)} required fullWidth />
+                  <TextField label="Previous role" value={profile.previousRole || ""} onChange={(event) => updateField("previousRole", event.target.value)} required fullWidth />
+                  <TextField label="Previous company" value={profile.previousCompany || ""} onChange={(event) => updateField("previousCompany", event.target.value)} required fullWidth />
                   <TextField label="How you use AI" value={profile.aiUsage || ""} onChange={(event) => updateField("aiUsage", event.target.value)} fullWidth />
-                  <TextField label="LinkedIn URL" value={profile.linkedinUrl || ""} onChange={(event) => updateField("linkedinUrl", event.target.value)} fullWidth />
-                  <TextField label="GitHub URL" value={profile.githubUrl || ""} onChange={(event) => updateField("githubUrl", event.target.value)} fullWidth />
-                  <TextField label="Role description" value={profile.jobDescription || ""} onChange={(event) => updateField("jobDescription", event.target.value)} multiline minRows={3} className="profile-description-field" fullWidth />
+                  <TextField label="Skills (comma separated)" value={skillsInput} onChange={(event) => {
+                    setSaved(false);
+                    setSkillsInput(event.target.value);
+                  }} required fullWidth />
+                  <TextField label="LinkedIn URL" value={profile.linkedinUrl || ""} onChange={(event) => updateField("linkedinUrl", event.target.value)} required fullWidth />
+                  <TextField label="GitHub URL" value={profile.githubUrl || ""} onChange={(event) => updateField("githubUrl", event.target.value)} required fullWidth />
+                  <TextField label="Role description" value={profile.jobDescription || ""} onChange={(event) => updateField("jobDescription", event.target.value)} required multiline minRows={3} className="profile-description-field" fullWidth />
                 </Box>
               </Paper>
             </Stack>
@@ -171,7 +276,9 @@ export default function ProfilePage() {
             <Stack spacing={2.5}>
               <Paper className="resume-panel" elevation={0}>
                 <span className="resume-icon"><UploadFileRoundedIcon /></span>
-                <Typography variant="h3">Resume</Typography>
+                <Typography variant="h3">
+                  Resume <Box component="span" sx={{ color: "error.main" }}>*</Box>
+                </Typography>
                 <Typography variant="body2" color="text.secondary">
                   {profile.resume ? profile.resume.split("/").pop() : "Add a resume to keep your career profile in one place."}
                 </Typography>
@@ -186,6 +293,95 @@ export default function ProfilePage() {
                 <Typography variant="subtitle1">Career details stay in your account</Typography>
                 <Typography variant="body2">Your impact reports are private. Only profile details you choose to share appear in the community.</Typography>
               </Paper>
+              <Paper className="profile-section" elevation={0}>
+                <Typography className="impact-overview-label">PRIVACY & NOTIFICATIONS</Typography>
+                <Typography variant="h2" className="section-title">Account preferences</Typography>
+                <Stack spacing={0.5} sx={{ mt: 1 }}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={profile.privacySettings?.profileDiscoverable ?? true}
+                        onChange={(event) => setProfile((current) => current ? {
+                          ...current,
+                          privacySettings: { profileDiscoverable: event.target.checked },
+                        } : current)}
+                      />
+                    }
+                    label="Make my profile discoverable to the community"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={profile.notificationPreferences?.email ?? true}
+                        onChange={(event) => setProfile((current) => current ? {
+                          ...current,
+                          notificationPreferences: {
+                            email: event.target.checked,
+                            sms: current.notificationPreferences?.sms ?? false,
+                            whatsapp: current.notificationPreferences?.whatsapp ?? false,
+                          },
+                        } : current)}
+                      />
+                    }
+                    label="Email notifications"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={profile.notificationPreferences?.sms ?? false}
+                        onChange={(event) => setProfile((current) => current ? {
+                          ...current,
+                          notificationPreferences: {
+                            email: current.notificationPreferences?.email ?? true,
+                            sms: event.target.checked,
+                            whatsapp: current.notificationPreferences?.whatsapp ?? false,
+                          },
+                        } : current)}
+                      />
+                    }
+                    label="SMS notifications"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={profile.notificationPreferences?.whatsapp ?? false}
+                        onChange={(event) => setProfile((current) => current ? {
+                          ...current,
+                          notificationPreferences: {
+                            email: current.notificationPreferences?.email ?? true,
+                            sms: current.notificationPreferences?.sms ?? false,
+                            whatsapp: event.target.checked,
+                          },
+                        } : current)}
+                      />
+                    }
+                    label="WhatsApp notifications"
+                  />
+                </Stack>
+                <Button
+                  variant="contained"
+                  onClick={() => void saveAccountSettings()}
+                  disabled={settingsSaving || !hasAccountSettingsChanges}
+                  sx={{ mt: 1 }}
+                >
+                  {settingsSaving ? <CircularProgress size={18} color="inherit" /> : "Save preferences"}
+                </Button>
+              </Paper>
+              <Paper className="profile-section" elevation={0}>
+                <Typography className="impact-overview-label">DANGER ZONE</Typography>
+                <Typography variant="h3">Delete account</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1.5 }}>
+                  Permanently delete your account and associated career data. This cannot be undone.
+                </Typography>
+                <Button
+                  color="error"
+                  variant="outlined"
+                  startIcon={<DeleteForeverRoundedIcon />}
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  Delete my account
+                </Button>
+              </Paper>
             </Stack>
           </Box>
 
@@ -194,12 +390,45 @@ export default function ProfilePage() {
             <Typography variant="body2" color="text.secondary">
               {saved ? <><CheckRoundedIcon fontSize="small" /> Changes saved</> : hasChanges ? "You have unsaved changes" : "All changes are up to date"}
             </Typography>
-            <Button variant="contained" onClick={() => void saveProfile()} disabled={!hasChanges || saving}>
+            <Button variant="contained" onClick={() => void saveProfile()} disabled={(!hasChanges && !hasSkillsChanges) || saving}>
               {saving ? <CircularProgress size={18} color="inherit" /> : "Save profile"}
             </Button>
           </Box>
         </>
       )}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => {
+          if (deletingAccount) return;
+          setDeleteDialogOpen(false);
+          setDeleteConfirmation("");
+        }}
+      >
+        <DialogTitle>Delete your account permanently?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            This deletes your profile, posts, comments, impact reports, and career journey. Type DELETE to confirm.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            fullWidth
+            label="Type DELETE to confirm"
+            value={deleteConfirmation}
+            onChange={(event) => setDeleteConfirmation(event.target.value)}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)} disabled={deletingAccount}>Cancel</Button>
+          <Button
+            color="error"
+            onClick={() => void handleDeleteAccount()}
+            disabled={deleteConfirmation !== "DELETE" || deletingAccount}
+          >
+            {deletingAccount ? <CircularProgress size={18} color="inherit" /> : "Delete account"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 }

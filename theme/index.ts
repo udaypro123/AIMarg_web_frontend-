@@ -91,43 +91,43 @@ export const theme = createTheme({
   typography: {
     fontFamily: "sans-serif",
     h1: {
-      fontSize: "2.5rem",
+      fontSize: "calc(2.5rem + 2px)",
       fontWeight: 700,
       lineHeight: 1.2,
       letterSpacing: "-0.02em",
     },
     h2: {
-      fontSize: "2rem",
+      fontSize: "calc(2rem + 2px)",
       fontWeight: 700,
       lineHeight: 1.3,
       letterSpacing: "-0.01em",
     },
     h3: {
-      fontSize: "1.5rem",
+      fontSize: "calc(1.5rem + 2px)",
       fontWeight: 600,
       lineHeight: 1.4,
     },
     h4: {
-      fontSize: "1.25rem",
+      fontSize: "calc(1.25rem + 2px)",
       fontWeight: 600,
       lineHeight: 1.5,
     },
     h5: {
-      fontSize: "1.125rem",
+      fontSize: "calc(1.125rem + 2px)",
       fontWeight: 600,
       lineHeight: 1.5,
     },
     h6: {
-      fontSize: "1rem",
+      fontSize: "calc(1rem + 2px)",
       fontWeight: 600,
       lineHeight: 1.5,
     },
     body1: {
-      fontSize: "1rem",
+      fontSize: "calc(1rem + 2px)",
       lineHeight: 1.6,
     },
     body2: {
-      fontSize: "0.875rem",
+      fontSize: "calc(0.875rem + 2px)",
       lineHeight: 1.5,
     },
     button: {

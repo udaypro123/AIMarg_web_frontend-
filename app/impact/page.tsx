@@ -22,7 +22,6 @@ import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import { AFFECTED_AREAS, EMPLOYMENT_STATUS, IMPACT_STATUS } from "@/constants";
 import { createImpactReport, getMyImpactReports, type NewImpactReport } from "@/services/impact.service";
-import { getProfile } from "@/services/user.service";
 import type { ImpactReport } from "@/types/api";
 
 export default function ImpactPage() {
@@ -39,11 +38,10 @@ export default function ImpactPage() {
 
   useEffect(() => {
     let active = true;
-    Promise.all([getMyImpactReports(), getProfile()])
-      .then(([myReports, profile]) => {
+    getMyImpactReports()
+      .then((myReports) => {
         if (!active) return;
         setReports(myReports);
-        if (profile.employmentStatus) setEmploymentStatus(profile.employmentStatus);
       })
       .catch(() => {
         if (active) setError("We could not load your impact reports. Please try again.");

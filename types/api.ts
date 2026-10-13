@@ -21,15 +21,9 @@ export interface User {
   name: string;
   email: string;
   country?: string;
-  profession?: string;
-  industry?: string;
   experience?: string;
-  employmentStatus?: string;
   skills?: string[];
-  careerGoal?: string;
   aiUsage?: string;
-  aiImpactStatus?: string;
-  mobile?: string;
   currentRole?: string;
   previousRole?: string;
   previousCompany?: string;
@@ -38,7 +32,14 @@ export interface User {
   linkedinUrl?: string;
   githubUrl?: string;
   resume?: string;
-  avatar?: string;
+  privacySettings?: {
+    profileDiscoverable: boolean;
+  };
+  notificationPreferences?: {
+    email: boolean;
+    sms: boolean;
+    whatsapp: boolean;
+  };
   roles?: string[];
   isBlocked?: boolean;
   isEmailVerified?: boolean;
@@ -73,6 +74,7 @@ export interface UserComment {
   _id: string;
   targetUserId: string;
   userId: string;
+  parentCommentId?: string | null;
   userName: string;
   content: string;
   createdAt: string;

@@ -93,7 +93,7 @@ function AdminUsers({ admin }: { admin: User }) {
       if (status === "active" && account.isBlocked) return false;
       if (status === "blocked" && !account.isBlocked) return false;
       if (!normalizedQuery) return true;
-      return [account.name, account.email, account.currentRole, account.company, account.profession, ...(account.skills || [])]
+      return [account.name, account.email, account.currentRole, account.company, ...(account.skills || [])]
         .some((value) => value?.toLowerCase().includes(normalizedQuery));
     });
   }, [query, status, users]);
@@ -178,7 +178,7 @@ function AdminUsers({ admin }: { admin: User }) {
                   <strong>{account.name}</strong>
                   <small>{account.email}</small>
                   <small className="admin-user-role-line">
-                    {[account.currentRole, account.company].filter(Boolean).join(" at ") || account.profession || account.roles?.[0] || "USER"}
+                    {[account.currentRole, account.company].filter(Boolean).join(" at ") || account.roles?.[0] || "USER"}
                   </small>
                 </span>
               </Button>

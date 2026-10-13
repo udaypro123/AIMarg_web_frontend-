@@ -25,7 +25,6 @@ export async function register(payload: {
   email: string;
   password: string;
   country?: string;
-  profession?: string;
 }) {
   const { data } = await apiClient.post<AuthResponse>("/auth/register", payload);
   if (data.success && data.data.accessToken) {

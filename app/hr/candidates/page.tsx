@@ -63,7 +63,7 @@ function CandidateDirectory({ user }: { user: User }) {
   const visibleCandidates = useMemo(() => {
     const term = query.trim().toLowerCase();
     if (!term) return candidates;
-    return candidates.filter((candidate) => [candidate.name, candidate.email, candidate.currentRole, candidate.company, candidate.profession, ...(candidate.skills || [])]
+    return candidates.filter((candidate) => [candidate.name, candidate.email, candidate.currentRole, candidate.company, ...(candidate.skills || [])]
       .some((value) => value?.toLowerCase().includes(term)));
   }, [candidates, query]);
 
@@ -117,8 +117,6 @@ function CandidateDirectory({ user }: { user: User }) {
               </Button>
               <Box className="admin-candidate-meta">
                 <Box className="admin-candidate-facts">
-                  {candidate.mobile && <Typography variant="caption">{candidate.mobile}</Typography>}
-                  {candidate.profession && <Typography variant="caption">{candidate.profession}</Typography>}
                   <Typography variant="caption">Joined {candidate.createdAt ? new Date(candidate.createdAt).toLocaleDateString() : "-"}</Typography>
                 </Box>
                 {candidate.skills?.length ? <Box className="admin-skill-list">{candidate.skills.slice(0, 4).map((skill) => <span key={skill}>{skill}</span>)}{candidate.skills.length > 4 && <small>+{candidate.skills.length - 4}</small>}</Box> : null}

@@ -22,3 +22,7 @@ export async function downloadResume(): Promise<Blob> {
   const { data } = await apiClient.get<Blob>("/users/me/resume", { responseType: "blob" });
   return data;
 }
+
+export async function deleteMyAccount(): Promise<void> {
+  await apiClient.delete("/users/me");
+}

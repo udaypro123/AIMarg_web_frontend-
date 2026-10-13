@@ -44,9 +44,9 @@ export default function HomePage() {
   const milestones = journey?.milestones || [];
   const completedMilestones = milestones.filter((milestone) => milestone.completed).length;
   const nextMilestone = milestones.find((milestone) => !milestone.completed);
-  const profileFields = [profile?.currentRole, profile?.company, profile?.employmentStatus, profile?.skills?.length ? "skills" : "", profile?.careerGoal];
+  const profileFields = [profile?.currentRole, profile?.company, profile?.experience, profile?.skills?.length ? "skills" : ""];
   const profileProgress = Math.round((profileFields.filter(Boolean).length / profileFields.length) * 100);
-  const profileComplete = Boolean(profile?.currentRole && profile.company && profile.skills?.length && profile.mobile);
+  const profileComplete = Boolean(profile?.currentRole && profile.company && profile.experience && profile.skills?.length);
   const resumeName = profile?.resume?.split("/").pop();
 
   return (

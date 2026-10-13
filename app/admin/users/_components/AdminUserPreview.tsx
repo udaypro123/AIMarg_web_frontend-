@@ -160,10 +160,6 @@ export default function AdminUserPreview({
           <Paper className="admin-detail-section" elevation={0}>
             <Typography className="admin-section-title">Contact & career</Typography>
             <Box className="admin-detail-fields-grid">
-              <PreviewField label="Mobile" value={user.mobile} />
-              <PreviewField label="Profession" value={user.profession} />
-              <PreviewField label="Industry" value={user.industry} />
-              <PreviewField label="Employment" value={user.employmentStatus} />
               <PreviewField label="Experience" value={user.experience} />
               <PreviewField label="Previous role" value={user.previousRole} />
             </Box>

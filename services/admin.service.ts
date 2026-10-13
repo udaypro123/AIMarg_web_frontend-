@@ -44,7 +44,15 @@ export async function getAdminUserComments(userId: string): Promise<UserComment[
   return data.data;
 }
 
-export async function addAdminUserComment(userId: string, content: string): Promise<UserComment> {
-  const { data } = await apiClient.post<{ data: UserComment }>("/user-comments", { targetUserId: userId, content });
+export async function addAdminUserComment(
+  userId: string,
+  content: string,
+  parentCommentId?: string
+): Promise<UserComment> {
+  const { data } = await apiClient.post<{ data: UserComment }>("/user-comments", {
+    targetUserId: userId,
+    content,
+    ...(parentCommentId ? { parentCommentId } : {}),
+  });
   return data.data;
 }

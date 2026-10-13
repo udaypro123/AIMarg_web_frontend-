@@ -75,6 +75,11 @@ export default function RootLayoutClient({ children }: { children: React.ReactNo
   const isHR = Boolean(user?.roles?.includes("HR"));
   const navigationItems = isAdmin ? adminNav : isHR ? hrNav : primaryNav;
   const mobileNavigationItems = isAdmin || isHR ? navigationItems : [...primaryNav, { label: "Profile", href: "/profile", icon: <PersonRoundedIcon /> }];
+  const activeNavigationHref = [...navigationItems]
+    .filter((item) => item.href === "/"
+      ? pathname === "/"
+      : pathname === item.href || pathname.startsWith(`${item.href}/`))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   useEffect(() => {
     if (isAuthRoute) return;
@@ -158,7 +163,7 @@ export default function RootLayoutClient({ children }: { children: React.ReactNo
             <Typography className="workspace-nav-label">{isAdmin ? "ADMINISTRATION" : isHR ? "HR WORKSPACE" : "WORKSPACE"}</Typography>
             <Stack component="nav" aria-label="Workspace navigation" spacing={0.5} className="workspace-nav">
               {navigationItems.map((item) => {
-                const active = item.href === "/" ? pathname === "/" : pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const active = item.href === activeNavigationHref;
                 return (
                   <Button
                     key={item.href}
@@ -259,7 +264,7 @@ export default function RootLayoutClient({ children }: { children: React.ReactNo
 
           <Box component="nav" aria-label="Mobile workspace navigation" className={`workspace-mobile-nav${isAdmin ? " is-admin-nav" : isHR ? " is-hr-nav" : " is-user-nav"}`}>
             {mobileNavigationItems.map((item) => {
-              const active = item.href === "/" ? pathname === "/" : pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const active = item.href === activeNavigationHref;
               return (
                 <Link key={item.href} href={item.href} className={`workspace-mobile-item${active ? " is-active" : ""}`} aria-current={active ? "page" : undefined}>
                   {item.icon}
