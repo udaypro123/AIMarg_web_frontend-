@@ -35,6 +35,8 @@ export default function ImpactPage() {
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [reloadReports, setReloadReports] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -42,9 +44,10 @@ export default function ImpactPage() {
       .then((myReports) => {
         if (!active) return;
         setReports(myReports);
+        setLoadError("");
       })
       .catch(() => {
-        if (active) setError("We could not load your impact reports. Please try again.");
+        if (active) setLoadError("We could not load your impact reports. Please try again.");
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -52,7 +55,7 @@ export default function ImpactPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [reloadReports]);
 
   const latest = reports[0];
   const toggleArea = (area: string) => {
@@ -88,6 +91,12 @@ export default function ImpactPage() {
     setDialogOpen(true);
   };
 
+  const retryLoadReports = () => {
+    setLoading(true);
+    setLoadError("");
+    setReloadReports((current) => current + 1);
+  };
+
   return (
     <Stack spacing={3}>
       <Box className="page-heading-row">
@@ -106,9 +115,15 @@ export default function ImpactPage() {
           <span className="impact-icon"><InsightsRoundedIcon /></span>
           <Box>
             <Typography className="impact-overview-label">LATEST SELF-REPORT</Typography>
-            <Typography className="impact-overview-value">{loading ? "Loading report" : latest?.impactStatus || "No assessment yet"}</Typography>
+            <Typography className="impact-overview-value">
+              {loading ? "Loading report" : loadError ? "Reports unavailable" : latest?.impactStatus || "No assessment yet"}
+            </Typography>
             <Typography className="impact-overview-caption">
-              {latest ? `Recorded ${new Date(latest.createdAt).toLocaleDateString()}` : "Start with what has changed in your day-to-day work."}
+              {latest
+                ? `Recorded ${new Date(latest.createdAt).toLocaleDateString()}`
+                : loadError
+                  ? "Retry to see your saved check-ins."
+                  : "Start with what has changed in your day-to-day work."}
             </Typography>
           </Box>
         </Box>
@@ -125,7 +140,14 @@ export default function ImpactPage() {
         </Box>
       </Box>
 
-      {loading ? (
+      {loadError ? (
+        <Alert
+          severity="error"
+          action={<Button color="inherit" size="small" onClick={retryLoadReports}>Retry</Button>}
+        >
+          {loadError}
+        </Alert>
+      ) : loading ? (
         <Box className="loading-state"><CircularProgress size={25} /></Box>
       ) : reports.length === 0 ? (
         <Paper className="empty-state">
@@ -153,11 +175,21 @@ export default function ImpactPage() {
         </Stack>
       )}
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
+      <Dialog
+        open={dialogOpen}
+        onClose={() => {
+          if (!saving) setDialogOpen(false);
+        }}
+        fullWidth
+        maxWidth="sm"
+        className="impact-assessment-dialog"
+        aria-labelledby="impact-assessment-title"
+      >
         <Box component="form" onSubmit={submitAssessment}>
           <DialogTitle className="dialog-heading">
             <Typography className="page-eyebrow">YOUR CHECK-IN</Typography>
-            <Typography variant="h2" className="section-title">What has changed?</Typography>
+            <Typography id="impact-assessment-title" variant="h2" className="section-title">What has changed?</Typography>
+            <Typography className="impact-dialog-intro">Share what AI has changed in your work. This check-in is private to your account.</Typography>
           </DialogTitle>
           <DialogContent className="assessment-form">
             {error && <Alert severity="error">{error}</Alert>}
@@ -172,16 +204,25 @@ export default function ImpactPage() {
             </TextField>
             <Box>
               <Typography className="form-label">Areas affected</Typography>
+              <Typography className="impact-area-hint">Choose every area where you have noticed a change.</Typography>
               <Box className="area-options">
                 {AFFECTED_AREAS.map((area) => (
                   <FormControlLabel key={area} control={<Checkbox checked={impactAreas.includes(area)} onChange={() => toggleArea(area)} size="small" />} label={area} />
                 ))}
               </Box>
             </Box>
-            <TextField label="Anything you want to add?" value={description} onChange={(event) => setDescription(event.target.value)} multiline minRows={3} fullWidth />
+            <TextField
+              label="Anything you want to add?"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              multiline
+              minRows={3}
+              fullWidth
+              helperText={`${description.length} characters`}
+            />
           </DialogContent>
           <DialogActions className="dialog-actions">
-            <Button onClick={() => setDialogOpen(false)} color="inherit">Cancel</Button>
+            <Button onClick={() => setDialogOpen(false)} color="inherit" disabled={saving}>Cancel</Button>
             <Button type="submit" variant="contained" disabled={saving}>{saving ? <CircularProgress size={18} color="inherit" /> : "Save check-in"}</Button>
           </DialogActions>
         </Box>

@@ -24,12 +24,27 @@ export async function register(payload: {
   name: string;
   email: string;
   password: string;
+  signupToken: string;
+  role: "USER" | "HR";
   country?: string;
 }) {
   const { data } = await apiClient.post<AuthResponse>("/auth/register", payload);
   if (data.success && data.data.accessToken) {
     setAccessToken(data.data.accessToken);
   }
+  return data;
+}
+
+export async function sendSignupOtp(email: string) {
+  const { data } = await apiClient.post<ApiResponse>("/auth/signup/send-otp", { email });
+  return data;
+}
+
+export async function verifySignupOtp(email: string, otp: string) {
+  const { data } = await apiClient.post<ApiResponse<{ signupToken: string }>>(
+    "/auth/signup/verify-otp",
+    { email, otp }
+  );
   return data;
 }
 

@@ -12,7 +12,7 @@ import { PrimaryButton } from "@/components/common/Buttons";
 import { googleLogin, login } from "@/services/auth.service";
 import { useToast } from "@/components/common/Toast";
 import AuthScreen from "@/components/layout/AuthScreen";
-import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+// import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -43,19 +43,19 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleCredential = async (idToken: string) => {
-    setError("");
-    setGoogleLoading(true);
-    try {
-      const res = await googleLogin(idToken);
-      toast({ title: "Welcome back!", severity: "success" });
-      router.push(res.data.isNewUser ? "/onboarding" : "/");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Google sign-in failed");
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
+  // const handleGoogleCredential = async (idToken: string) => {
+  //   setError("");
+  //   setGoogleLoading(true);
+  //   try {
+  //     const res = await googleLogin(idToken);
+  //     toast({ title: "Welcome back!", severity: "success" });
+  //     router.push(res.data.isNewUser ? "/onboarding" : "/");
+  //   } catch (err: unknown) {
+  //     setError(err instanceof Error ? err.message : "Google sign-in failed");
+  //   } finally {
+  //     setGoogleLoading(false);
+  //   }
+  // };
 
   const emailSlotProps = {
     startAdornment: (
@@ -116,13 +116,13 @@ export default function LoginPage() {
               </PrimaryButton>
             </Stack>
           </Box>
-          <Divider>or continue with</Divider>
+          {/* <Divider>or continue with</Divider>
           <GoogleSignInButton
             disabled={loading || googleLoading}
             mode="signin"
             onCredential={handleGoogleCredential}
             onError={setError}
-          />
+          /> */}
           <Box className="auth-switch">
             <Typography variant="body2">New to AIMarg?</Typography>
             <Link href="/auth/register">Create an account <span aria-hidden="true">&#8594;</span></Link>

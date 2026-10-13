@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 import { Alert, Avatar, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, FormControlLabel, Paper, Stack, Switch, TextField, Typography } from "@mui/material";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
@@ -10,6 +11,13 @@ import DeleteForeverRoundedIcon from "@mui/icons-material/DeleteForeverRounded";
 import { deleteMyAccount, downloadResume, getProfile, updateProfile, uploadResume } from "@/services/user.service";
 import { setAccessToken } from "@/services/api";
 import type { User } from "@/types/api";
+
+function getRequestErrorMessage(error: unknown, fallback: string) {
+  if (axios.isAxiosError<{ message?: unknown }>(error) && typeof error.response?.data?.message === "string") {
+    return error.response.data.message;
+  }
+  return error instanceof Error ? error.message : fallback;
+}
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -122,13 +130,28 @@ export default function ProfilePage() {
 
   const handleUpload = async (file?: File) => {
     if (!file) return;
+    const supportedMimeTypes = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    if ((extension !== "pdf" && extension !== "docx") || !supportedMimeTypes.includes(file.type)) {
+      setError("Choose a PDF or DOCX resume.");
+      if (fileInput.current) fileInput.current.value = "";
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Resume must be 5 MB or smaller.");
+      if (fileInput.current) fileInput.current.value = "";
+      return;
+    }
     setUploading(true);
     setError("");
     try {
       const resume = await uploadResume(file);
       setProfile((current) => current ? { ...current, resume } : current);
-    } catch {
-      setError("Resume upload failed. Use a PDF or Word document and try again.");
+    } catch (uploadError: unknown) {
+      setError(getRequestErrorMessage(uploadError, "Resume upload failed. Use a PDF or DOCX file and try again."));
     } finally {
       setUploading(false);
       if (fileInput.current) fileInput.current.value = "";
@@ -282,7 +305,7 @@ export default function ProfilePage() {
                 <Typography variant="body2" color="text.secondary">
                   {profile.resume ? profile.resume.split("/").pop() : "Add a resume to keep your career profile in one place."}
                 </Typography>
-                <input ref={fileInput} type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden onChange={(event) => void handleUpload(event.target.files?.[0])} />
+                <input ref={fileInput} type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden onChange={(event) => void handleUpload(event.target.files?.[0])} />
                 <Button variant="contained" startIcon={uploading ? <CircularProgress size={16} color="inherit" /> : <UploadFileRoundedIcon />} onClick={() => fileInput.current?.click()} disabled={uploading} fullWidth>
                   {uploading ? "Uploading" : profile.resume ? "Replace resume" : "Upload resume"}
                 </Button>

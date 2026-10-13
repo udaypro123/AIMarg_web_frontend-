@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Alert, Box, Typography, Stack, TextField, IconButton, InputAdornment, Divider } from "@mui/material";
+import axios from "axios";
+import { Alert, Box, Button, Typography, Stack, TextField, IconButton, InputAdornment, MenuItem } from "@mui/material";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import EmailIcon from "@mui/icons-material/Email";
@@ -10,10 +11,16 @@ import LockIcon from "@mui/icons-material/Lock";
 import PersonIcon from "@mui/icons-material/Person";
 import Link from "next/link";
 import { PrimaryButton } from "@/components/common/Buttons";
-import { googleLogin, register } from "@/services/auth.service";
+import { register, sendSignupOtp, verifySignupOtp } from "@/services/auth.service";
 import { useToast } from "@/components/common/Toast";
 import AuthScreen from "@/components/layout/AuthScreen";
-import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+
+function getAuthErrorMessage(error: unknown, fallback: string) {
+  if (axios.isAxiosError<{ message?: unknown }>(error) && typeof error.response?.data?.message === "string") {
+    return error.response.data.message;
+  }
+  return error instanceof Error ? error.message : fallback;
+}
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -21,17 +28,74 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [signupToken, setSignupToken] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState<"USER" | "HR">("USER");
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [error, setError] = useState("");
+
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    setOtp("");
+    setOtpSent(false);
+    setSignupToken("");
+  };
+
+  const handleSendOtp = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setError("Enter a valid email address first.");
+      return;
+    }
+    setError("");
+    setSendingOtp(true);
+    try {
+      await sendSignupOtp(normalizedEmail);
+      setEmail(normalizedEmail);
+      setOtpSent(true);
+      toast({ title: "Verification code sent to your email.", severity: "success" });
+    } catch (err: unknown) {
+      setError(getAuthErrorMessage(err, "Could not send verification code."));
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    const normalizedOtp = otp.trim();
+    if (!/^\d{6}$/.test(normalizedOtp)) {
+      setError("Enter the 6-digit code sent to your email.");
+      return;
+    }
+    setError("");
+    setVerifyingOtp(true);
+    try {
+      const response = await verifySignupOtp(email.trim().toLowerCase(), normalizedOtp);
+      const token = response.data?.signupToken;
+      if (!token) throw new Error("Email verification could not be completed. Please try again.");
+      setSignupToken(token);
+      toast({ title: "Email verified. Complete your account details.", severity: "success" });
+    } catch (err: unknown) {
+      setError(getAuthErrorMessage(err, "Could not verify the code."));
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!signupToken) {
+      setError("Verify your email before creating your account.");
+      return;
+    }
     setError("");
     setLoading(true);
     try {
-      const res = await register({ name, email, password });
+      const res = await register({ name, email: email.trim().toLowerCase(), password, signupToken, role });
       if (res.success) {
         toast({ title: "Account created!", severity: "success" });
         router.push("/onboarding");
@@ -39,23 +103,9 @@ export default function RegisterPage() {
         setError(res.message || "Registration failed");
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Registration failed");
+      setError(getAuthErrorMessage(err, "Registration failed"));
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleGoogleCredential = async (idToken: string) => {
-    setError("");
-    setGoogleLoading(true);
-    try {
-      const res = await googleLogin(idToken);
-      toast({ title: res.data.isNewUser ? "Account created!" : "Welcome back!", severity: "success" });
-      router.push(res.data.isNewUser ? "/onboarding" : "/");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Google sign-up failed");
-    } finally {
-      setGoogleLoading(false);
     }
   };
 
@@ -99,46 +149,88 @@ export default function RegisterPage() {
           <Box component="form" onSubmit={handleSubmit} className="auth-form">
             <Stack spacing={1.8}>
               <TextField
-                label="Full name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                required
-                fullWidth
-                autoComplete="name"
-                slotProps={{ input: nameSlotProps }}
-              />
-              <TextField
                 label="Email address"
                 type="email"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) => handleEmailChange(event.target.value)}
                 required
                 fullWidth
                 autoComplete="email"
+                disabled={Boolean(signupToken)}
                 slotProps={{ input: emailSlotProps }}
               />
-              <TextField
-                label="Password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                required
-                fullWidth
-                slotProps={{ input: passwordSlotProps, htmlInput: { minLength: 8, autoComplete: "new-password" } }}
-                helperText="Use at least 8 characters."
-              />
-              <PrimaryButton type="submit" fullWidth loading={loading} size="large" className="auth-submit-button">
-                Create account
-              </PrimaryButton>
+              {!signupToken && (
+                <>
+                  <Button type="button" variant="outlined" fullWidth onClick={() => void handleSendOtp()} disabled={sendingOtp || verifyingOtp}>
+                    {sendingOtp ? "Sending code..." : otpSent ? "Resend verification code" : "Send verification code"}
+                  </Button>
+                  {otpSent && (
+                    <Stack spacing={1}>
+                      <TextField
+                        label="Email verification code"
+                        value={otp}
+                        onChange={(event) => setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                        required
+                        fullWidth
+                        autoComplete="one-time-code"
+                        slotProps={{ htmlInput: { inputMode: "numeric", maxLength: 6, pattern: "[0-9]{6}" } }}
+                        helperText="Enter the 6-digit code sent to your email."
+                      />
+                      <Button type="button" variant="contained" fullWidth onClick={() => void handleVerifyOtp()} disabled={verifyingOtp || otp.length !== 6}>
+                        {verifyingOtp ? "Verifying..." : "Verify email"}
+                      </Button>
+                    </Stack>
+                  )}
+                </>
+              )}
+              {signupToken && (
+                <>
+                  <Alert severity="success">Email verified. Your code has been accepted.</Alert>
+                  <TextField
+                    label="Full name"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    required
+                    fullWidth
+                    autoComplete="name"
+                    slotProps={{ input: nameSlotProps }}
+                  />
+                  <TextField
+                    select
+                    label="Account type"
+                    value={role}
+                    onChange={(event) => setRole(event.target.value === "HR" ? "HR" : "USER")}
+                    required
+                    fullWidth
+                    helperText="Choose User for a personal account or HR for recruiting features."
+                  >
+                    <MenuItem value="USER">User</MenuItem>
+                    <MenuItem value="HR">HR</MenuItem>
+                  </TextField>
+                  <TextField
+                    label="Password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    required
+                    fullWidth
+                    slotProps={{ input: passwordSlotProps, htmlInput: { minLength: 8, autoComplete: "new-password" } }}
+                    helperText="Use at least 8 characters."
+                  />
+                  <PrimaryButton type="submit" fullWidth loading={loading} size="large" className="auth-submit-button">
+                    Create account
+                  </PrimaryButton>
+                </>
+              )}
             </Stack>
           </Box>
-          <Divider>or sign up with</Divider>
+          {/* <Divider>or sign up with</Divider>
           <GoogleSignInButton
             disabled={loading || googleLoading}
             mode="signup"
             onCredential={handleGoogleCredential}
             onError={setError}
-          />
+          /> */}
           <Box className="auth-switch">
             <Typography variant="body2">Already have an account?</Typography>
             <Link href="/auth/login">Sign in <span aria-hidden="true">&#8594;</span></Link>
