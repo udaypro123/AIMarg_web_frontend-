@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Avatar, Box, Button, CircularProgress, InputAdornment, Paper, Stack, TextField, Typography } from "@mui/material";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
+import PeopleAltRoundedIcon from "@mui/icons-material/PeopleAltRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import HRAccess from "../_components/HRAccess";
@@ -78,56 +79,62 @@ function CandidateDirectory({ user }: { user: User }) {
   };
 
   return (
-    <Stack spacing={3}>
-      <Box className="admin-page-heading">
+    <Stack spacing={3} className="hr-candidate-page">
+      <Box className="hr-candidate-heading">
         <Box>
           <Typography className="page-eyebrow">HR WORKSPACE</Typography>
           <Typography variant="h1" className="page-title">Candidates</Typography>
           <Typography className="page-subtitle">Explore candidate profiles and connect through their shared activity.</Typography>
         </Box>
-        <Button variant="outlined" startIcon={refreshing ? <CircularProgress size={16} /> : <RefreshRoundedIcon />} onClick={refresh} disabled={refreshing}>Refresh</Button>
+        <Button className="hr-candidate-refresh" variant="outlined" startIcon={refreshing ? <CircularProgress size={16} /> : <RefreshRoundedIcon />} onClick={refresh} disabled={refreshing}>Refresh</Button>
       </Box>
 
       {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
 
-      <Box className="admin-users-toolbar">
-        <Typography className="admin-users-count"><strong>{stats?.totalUsers ?? candidates.length}</strong> candidates</Typography>
+      <Box className="hr-candidate-toolbar">
+        <Box>
+          <Typography className="hr-candidate-count"><strong>{stats?.totalUsers ?? candidates.length}</strong> candidates</Typography>
+          <Typography className="hr-candidate-result-count">
+            {query.trim() ? `${visibleCandidates.length} matching profiles` : "Browse the candidate community"}
+          </Typography>
+        </Box>
         <TextField
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search candidates"
           size="small"
-          className="admin-search"
+          className="hr-candidate-search"
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchRoundedIcon fontSize="small" /></InputAdornment> } }}
         />
       </Box>
 
       {loading ? <Box className="admin-loading"><CircularProgress size={26} /></Box> : visibleCandidates.length ? (
-        <Stack className="admin-candidate-list" spacing={1.25}>
+        <Box className="hr-candidate-list">
           {visibleCandidates.map((candidate) => (
-            <Paper key={candidate._id} className="admin-candidate-card" elevation={0}>
-              <Button className="admin-candidate-main" onClick={() => setSelected(candidate)}>
-                <Avatar className="admin-avatar">{candidate.name?.charAt(0).toUpperCase() || "U"}</Avatar>
-                <span className="admin-user-copy">
+            <Paper key={candidate._id} className="hr-candidate-card" elevation={0}>
+              <Button className="hr-candidate-main" onClick={() => setSelected(candidate)}>
+                <Avatar className="hr-candidate-avatar">{candidate.name?.charAt(0).toUpperCase() || "U"}</Avatar>
+                <span className="hr-candidate-copy">
                   <strong>{candidate.name}</strong>
-                  <small>{[candidate.currentRole, candidate.company].filter(Boolean).join(" at ") || candidate.roles?.[0] || "USER"}</small>
-                  <small>{candidate.email}</small>
+                  <small className="hr-candidate-role">{[candidate.currentRole, candidate.company].filter(Boolean).join(" at ") || candidate.roles?.[0] || "USER"}</small>
+                  <small className="hr-candidate-email">{candidate.email}</small>
                 </span>
-                <ArrowForwardRoundedIcon className="admin-row-arrow" />
+                <ArrowForwardRoundedIcon className="hr-candidate-arrow" />
               </Button>
-              <Box className="admin-candidate-meta">
-                <Box className="admin-candidate-facts">
+              <Box className="hr-candidate-meta">
+                <Box className="hr-candidate-facts">
                   <Typography variant="caption">Joined {candidate.createdAt ? new Date(candidate.createdAt).toLocaleDateString() : "-"}</Typography>
                 </Box>
-                {candidate.skills?.length ? <Box className="admin-skill-list">{candidate.skills.slice(0, 4).map((skill) => <span key={skill}>{skill}</span>)}{candidate.skills.length > 4 && <small>+{candidate.skills.length - 4}</small>}</Box> : null}
-                {candidate.jobDescription && <Typography className="admin-candidate-description">{candidate.jobDescription}</Typography>}
-                <Typography className="admin-candidate-interactions">{candidate.likeCount} likes · {candidate.commentCount} comments</Typography>
+                {candidate.skills?.length ? <Box className="hr-candidate-skills">{candidate.skills.slice(0, 4).map((skill) => <span key={skill}>{skill}</span>)}{candidate.skills.length > 4 && <small>+{candidate.skills.length - 4}</small>}</Box> : null}
+                {candidate.jobDescription && <Typography className="hr-candidate-description">{candidate.jobDescription}</Typography>}
+                <Typography className="hr-candidate-interactions">{candidate.likeCount} likes <span aria-hidden="true">·</span> {candidate.commentCount} comments</Typography>
               </Box>
             </Paper>
           ))}
-        </Stack>
+        </Box>
       ) : (
-        <Paper className="admin-empty-panel" elevation={0}>
+        <Paper className="hr-candidate-empty" elevation={0}>
+          <span className="hr-candidate-empty-icon"><PeopleAltRoundedIcon /></span>
           <Typography variant="h3">{candidates.length ? "No matching candidates" : "No candidates yet"}</Typography>
           <Typography variant="body2">{candidates.length ? "Try another name, role, or skill." : "Candidate profiles will appear here."}</Typography>
         </Paper>

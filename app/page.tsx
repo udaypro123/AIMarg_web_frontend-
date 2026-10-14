@@ -50,7 +50,7 @@ export default function HomePage() {
   const resumeName = profile?.resume?.split("/").pop();
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={3} className="user-dashboard">
       <Box className="dashboard-heading">
         <Box>
           <Typography className="page-eyebrow">YOUR CAREER OVERVIEW</Typography>

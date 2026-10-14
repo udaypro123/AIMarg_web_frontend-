@@ -72,7 +72,7 @@ export default function SkillsPage() {
   };
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={3} className="user-skills-page">
       <Box className="page-heading-row">
         <Box>
           <Typography className="page-eyebrow">YOUR TOOLKIT</Typography>
@@ -85,6 +85,20 @@ export default function SkillsPage() {
       </Box>
 
       {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
+
+      <Box className="skills-overview-strip">
+        <Box className="skills-overview-copy">
+          <span className="skills-overview-icon"><AutoAwesomeRoundedIcon /></span>
+          <Box>
+            <Typography className="skills-overview-title">Build a toolkit that moves with you</Typography>
+            <Typography className="skills-overview-description">Keep your strengths visible and add capabilities as your career evolves.</Typography>
+          </Box>
+        </Box>
+        <Box className="skills-overview-stats">
+          <Box><strong>{loading ? "—" : skills.length}</strong><span>In your profile</span></Box>
+          <Box><strong>{loading ? "—" : catalog.length}</strong><span>In skill library</span></Box>
+        </Box>
+      </Box>
 
       <Box className="skills-layout">
         <Box className="skills-primary-column">
@@ -109,7 +123,7 @@ export default function SkillsPage() {
               </Box>
             )}
             <Box component="form" onSubmit={addCustomSkill} className="custom-skill-form">
-              <TextField label="Add a skill" placeholder="e.g. Product strategy" value={customSkill} onChange={(event) => setCustomSkill(event.target.value)} size="small" fullWidth />
+              <TextField label="Add a skill" placeholder="e.g. Product strategy" value={customSkill} onChange={(event) => setCustomSkill(event.target.value)} size="small" fullWidth slotProps={{ inputLabel: { shrink: true } }} />
               <Button type="submit" variant="outlined" startIcon={<AddRoundedIcon />} disabled={!customSkill.trim()}>Add</Button>
             </Box>
             <Box className="skills-save-row">

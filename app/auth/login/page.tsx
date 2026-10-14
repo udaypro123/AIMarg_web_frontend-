@@ -85,27 +85,32 @@ export default function LoginPage() {
       <ToastContainer />
       <AuthScreen eyebrow="WELCOME BACK" title="Sign in" subtitle="Pick up where you left off.">
         <Stack spacing={2.1} className="auth-form-stack">
+          <Typography className="auth-discover">
+            <Link href="/how-it-works">How does AIMarg work? <span aria-hidden="true">&#8594;</span></Link>
+          </Typography>
           {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
           <Box component="form" onSubmit={handleSubmit} className="auth-form">
             <Stack spacing={1.8}>
               <TextField
                 label="Email address"
+                placeholder="you@example.com"
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 required
                 fullWidth
                 autoFocus
-                slotProps={{ input: emailSlotProps, htmlInput: { autoComplete: "email" } }}
+                slotProps={{ input: emailSlotProps, inputLabel: { shrink: true }, htmlInput: { autoComplete: "email" } }}
               />
               <TextField
                 label="Password"
+                placeholder="Enter your password"
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 required
                 fullWidth
-                slotProps={{ input: passwordSlotProps, htmlInput: { autoComplete: "current-password" } }}
+                slotProps={{ input: passwordSlotProps, inputLabel: { shrink: true }, htmlInput: { autoComplete: "current-password" } }}
               />
               <Box className="auth-form-options">
                 <span>Secure sign in</span>

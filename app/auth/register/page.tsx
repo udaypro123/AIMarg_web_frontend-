@@ -150,6 +150,7 @@ export default function RegisterPage() {
             <Stack spacing={1.8}>
               <TextField
                 label="Email address"
+                placeholder="you@example.com"
                 type="email"
                 value={email}
                 onChange={(event) => handleEmailChange(event.target.value)}
@@ -157,7 +158,7 @@ export default function RegisterPage() {
                 fullWidth
                 autoComplete="email"
                 disabled={Boolean(signupToken)}
-                slotProps={{ input: emailSlotProps }}
+                slotProps={{ input: emailSlotProps, inputLabel: { shrink: true } }}
               />
               {!signupToken && (
                 <>
@@ -168,12 +169,13 @@ export default function RegisterPage() {
                     <Stack spacing={1}>
                       <TextField
                         label="Email verification code"
+                        placeholder="Enter the 6-digit code"
                         value={otp}
                         onChange={(event) => setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))}
                         required
                         fullWidth
                         autoComplete="one-time-code"
-                        slotProps={{ htmlInput: { inputMode: "numeric", maxLength: 6, pattern: "[0-9]{6}" } }}
+                        slotProps={{ inputLabel: { shrink: true }, htmlInput: { inputMode: "numeric", maxLength: 6, pattern: "[0-9]{6}" } }}
                         helperText="Enter the 6-digit code sent to your email."
                       />
                       <Button type="button" variant="contained" fullWidth onClick={() => void handleVerifyOtp()} disabled={verifyingOtp || otp.length !== 6}>
@@ -188,12 +190,13 @@ export default function RegisterPage() {
                   <Alert severity="success">Email verified. Your code has been accepted.</Alert>
                   <TextField
                     label="Full name"
+                    placeholder="Enter your full name"
                     value={name}
                     onChange={(event) => setName(event.target.value)}
                     required
                     fullWidth
                     autoComplete="name"
-                    slotProps={{ input: nameSlotProps }}
+                    slotProps={{ input: nameSlotProps, inputLabel: { shrink: true } }}
                   />
                   <TextField
                     select
@@ -209,12 +212,13 @@ export default function RegisterPage() {
                   </TextField>
                   <TextField
                     label="Password"
+                    placeholder="Create a password (8+ characters)"
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     required
                     fullWidth
-                    slotProps={{ input: passwordSlotProps, htmlInput: { minLength: 8, autoComplete: "new-password" } }}
+                    slotProps={{ input: passwordSlotProps, inputLabel: { shrink: true }, htmlInput: { minLength: 8, autoComplete: "new-password" } }}
                     helperText="Use at least 8 characters."
                   />
                   <PrimaryButton type="submit" fullWidth loading={loading} size="large" className="auth-submit-button">

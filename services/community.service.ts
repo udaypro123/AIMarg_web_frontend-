@@ -1,5 +1,10 @@
 import apiClient from "./api";
-import type { Comment, Post } from "@/types/api";
+import type { Comment, Post, User } from "@/types/api";
+
+export async function getCommunityMembers(): Promise<User[]> {
+  const { data } = await apiClient.get<{ data: User[] }>("/admin/public/users");
+  return data.data;
+}
 
 export async function getPosts(): Promise<Post[]> {
   const { data } = await apiClient.get<{ data: Post[] }>("/posts");
@@ -35,7 +40,11 @@ export async function getComments(postId: string): Promise<Comment[]> {
   return data.data;
 }
 
-export async function createComment(postId: string, content: string): Promise<Comment> {
-  const { data } = await apiClient.post<{ data: Comment }>("/comments", { postId, content });
+export async function createComment(postId: string, content: string, parentCommentId?: string): Promise<Comment> {
+  const { data } = await apiClient.post<{ data: Comment }>("/comments", {
+    postId,
+    content,
+    ...(parentCommentId ? { parentCommentId } : {}),
+  });
   return data.data;
 }

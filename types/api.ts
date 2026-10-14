@@ -131,7 +131,9 @@ export interface Post {
 
 export interface Comment {
   _id: string;
+  postId?: string;
   userId: string;
+  parentCommentId?: string | null;
   userName: string;
   content: string;
   createdAt: string;
@@ -144,4 +146,9 @@ export interface AppNotification {
   type: string;
   read: boolean;
   createdAt: string;
+  actorId?: string;
+  actorName?: string;
+  targetType?: "profile" | "post";
+  targetId?: string;
+  commentId?: string;
 }

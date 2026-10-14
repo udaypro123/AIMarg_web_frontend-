@@ -20,6 +20,7 @@ import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import FavoriteBorderRoundedIcon from "@mui/icons-material/FavoriteBorderRounded";
 import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
 import LaunchRoundedIcon from "@mui/icons-material/LaunchRounded";
+import ReplyRoundedIcon from "@mui/icons-material/ReplyRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import {
   addAdminUserComment,
@@ -56,14 +57,17 @@ export default function AdminUserPreview({
   open,
   onClose,
   onInteractionChange,
+  showFullProfile = true,
 }: {
   user: PreviewUser | null;
   open: boolean;
   onClose: () => void;
   onInteractionChange: (userId: string, interaction: InteractionCounts) => void;
+  showFullProfile?: boolean;
 }) {
   const [comments, setComments] = useState<UserComment[]>([]);
   const [commentText, setCommentText] = useState("");
+  const [replyTarget, setReplyTarget] = useState<UserComment | null>(null);
   const [loadingComments, setLoadingComments] = useState(true);
   const [sendingComment, setSendingComment] = useState(false);
   const [updatingLike, setUpdatingLike] = useState(false);
@@ -120,18 +124,100 @@ export default function AdminUserPreview({
     setSendingComment(true);
     setError("");
     try {
-      const created = await addAdminUserComment(user._id || "", content);
+      const created = await addAdminUserComment(user._id || "", content, replyTarget?._id);
       const nextCount = commentCount + 1;
-      setComments((current) => [created, ...current]);
+      setComments((current) => [...current, created]);
       setCommentText("");
+      setReplyTarget(null);
       setCommentCount(nextCount);
       onInteractionChange(user._id || "", { likeCount, commentCount: nextCount, likedByMe });
     } catch {
-      setError("Your comment could not be posted. Please try again.");
+      setError("Your comment or reply could not be posted. Please try again.");
     } finally {
       setSendingComment(false);
     }
   };
+
+  const renderCommentComposer = (isReply: boolean) => (
+    <Box component="form" onSubmit={handleComment} className={isReply ? "admin-thread-form is-inline-reply admin-preview-thread-form" : "admin-thread-form admin-preview-thread-form"}>
+      {isReply && replyTarget && (
+        <Box className="admin-reply-context">
+          <Typography>Replying to {replyTarget.userName}</Typography>
+          <Button
+            className="admin-reply-cancel"
+            size="small"
+            variant="outlined"
+            onClick={() => {
+              setReplyTarget(null);
+              setCommentText("");
+            }}
+          >
+            Cancel reply
+          </Button>
+        </Box>
+      )}
+      <TextField
+        value={commentText}
+        onChange={(event) => setCommentText(event.target.value)}
+        placeholder={isReply && replyTarget ? `Reply to ${replyTarget.userName}` : "Write a comment"}
+        fullWidth
+        multiline
+        minRows={2}
+        maxRows={5}
+        autoFocus={isReply}
+        slotProps={{
+          htmlInput: {
+            maxLength: 500,
+            "aria-label": isReply ? "Write a reply" : "Write a comment",
+          },
+        }}
+      />
+      <Button
+        type="submit"
+        variant="contained"
+        disabled={sendingComment || !commentText.trim() || loadingComments}
+        startIcon={sendingComment ? <CircularProgress size={17} color="inherit" /> : <SendRoundedIcon />}
+      >
+        {isReply ? "Post reply" : "Post comment"}
+      </Button>
+    </Box>
+  );
+  const renderCommentBranch = (parentCommentId: string | null, depth = 0): React.ReactNode =>
+    comments
+      .filter((comment) => {
+        const actualParentId = comments.some((item) => item._id === comment.parentCommentId)
+          ? comment.parentCommentId || null
+          : null;
+        return actualParentId === parentCommentId;
+      })
+      .map((comment) => (
+        <Box
+          className={depth ? "admin-thread-branch is-reply" : "admin-thread-branch"}
+          key={comment._id}
+          style={{ marginLeft: depth ? `${Math.min(depth, 5) * 12}px` : 0 }}
+        >
+          <Paper className="admin-thread-comment" elevation={0}>
+            <Box className="admin-thread-comment-heading">
+              <Typography className="admin-thread-author">{comment.userName}</Typography>
+              <Typography className="admin-thread-date">{new Date(comment.createdAt).toLocaleString()}</Typography>
+            </Box>
+            <Typography className="admin-thread-content">{comment.content}</Typography>
+            <Button
+              className="admin-thread-reply"
+              size="small"
+              startIcon={<ReplyRoundedIcon />}
+              onClick={() => {
+                setCommentText("");
+                setReplyTarget(comment);
+              }}
+            >
+              Reply
+            </Button>
+            {replyTarget?._id === comment._id && renderCommentComposer(true)}
+          </Paper>
+          {renderCommentBranch(comment._id, depth + 1)}
+        </Box>
+      ));
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" className="admin-preview-dialog">
@@ -151,50 +237,43 @@ export default function AdminUserPreview({
               <Typography className="admin-preview-email">{user.email}</Typography>
             </Box>
           </Box>
-          <Button component={Link} href={`/admin/users/${user._id}`} variant="outlined">Full profile</Button>
+          {showFullProfile && <Button component={Link} href={`/admin/users/${user._id}`} variant="outlined" sx={{ color: "black !important" }}>Full profile</Button>}
         </Box>
 
         {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
 
-        <Box className="admin-preview-profile-grid">
-          <Paper className="admin-detail-section" elevation={0}>
-            <Typography className="admin-section-title">Contact & career</Typography>
-            <Box className="admin-detail-fields-grid">
-              <PreviewField label="Experience" value={user.experience} />
-              <PreviewField label="Previous role" value={user.previousRole} />
+        <Paper className="admin-detail-section" elevation={0}>
+          <Typography className="admin-section-title">Contact & career</Typography>
+          <Box className="admin-detail-fields-grid">
+            <PreviewField label="Experience" value={user.experience} />
+            <PreviewField label="Previous role" value={user.previousRole} />
+          </Box>
+          {user.jobDescription && <Typography className="admin-detail-paragraph admin-preview-description">{user.jobDescription}</Typography>}
+          {user.skills?.length ? <Box className="admin-skill-list admin-preview-skills">{user.skills.slice(0, 8).map((skill) => <Chip key={skill} label={skill} size="small" />)}</Box> : null}
+          {(linkedinUrl || githubUrl) && (
+            <Box className="admin-profile-links admin-preview-links">
+              {linkedinUrl && <Button component="a" href={linkedinUrl} target="_blank" rel="noopener noreferrer" variant="text" endIcon={<LaunchRoundedIcon />}>LinkedIn</Button>}
+              {githubUrl && <Button component="a" href={githubUrl} target="_blank" rel="noopener noreferrer" variant="text" endIcon={<LaunchRoundedIcon />}>GitHub</Button>}
             </Box>
-            {user.jobDescription && <Typography className="admin-detail-paragraph admin-preview-description">{user.jobDescription}</Typography>}
-            {user.skills?.length ? <Box className="admin-skill-list admin-preview-skills">{user.skills.slice(0, 8).map((skill) => <Chip key={skill} label={skill} size="small" />)}</Box> : null}
-            {(linkedinUrl || githubUrl) && (
-              <Box className="admin-profile-links admin-preview-links">
-                {linkedinUrl && <Button component="a" href={linkedinUrl} target="_blank" rel="noopener noreferrer" variant="text" endIcon={<LaunchRoundedIcon />}>LinkedIn</Button>}
-                {githubUrl && <Button component="a" href={githubUrl} target="_blank" rel="noopener noreferrer" variant="text" endIcon={<LaunchRoundedIcon />}>GitHub</Button>}
-              </Box>
-            )}
-          </Paper>
+          )}
+        </Paper>
 
+        <Box className="admin-preview-profile-grid">
           <Paper className="admin-detail-section admin-preview-social" elevation={0}>
-            <Typography className="admin-section-title">Community interactions</Typography>
-            <Button className={likedByMe ? "admin-preview-like is-liked" : "admin-preview-like"} onClick={() => void handleLike()} disabled={updatingLike} startIcon={updatingLike ? <CircularProgress size={16} /> : likedByMe ? <FavoriteRoundedIcon /> : <FavoriteBorderRoundedIcon />}>
-              {likeCount} {likeCount === 1 ? "like" : "likes"}
-            </Button>
+            <Typography className="admin-section-title">Community interactions
+              <Button style={{float: "right", fontSize:"1.3rem"}} className={likedByMe ? "admin-preview-like is-liked" : "admin-preview-like"} onClick={() => void handleLike()} disabled={updatingLike} startIcon={updatingLike ? <CircularProgress size={16} /> : likedByMe ? <FavoriteRoundedIcon style={{fontSize: "1.3rem"}} /> : <FavoriteBorderRoundedIcon />}>
+                {likeCount} {likeCount === 1 ? "like" : "likes"}
+              </Button>
+            </Typography>
+
             <Typography className="admin-comments-heading">Comments ({commentCount})</Typography>
             <Box className="admin-preview-comments">
-              {loadingComments ? <CircularProgress size={20} /> : comments.length ? comments.map((comment) => (
-                <Box className="admin-preview-comment" key={comment._id}>
-                  <Typography variant="subtitle2">{comment.userName}</Typography>
-                  <Typography variant="body2">{comment.content}</Typography>
-                  <Typography variant="caption">{new Date(comment.createdAt).toLocaleDateString()}</Typography>
-                </Box>
-              )) : <Typography className="admin-no-data">No comments yet.</Typography>}
+              {loadingComments ? <CircularProgress size={20} /> : comments.length ? renderCommentBranch(null) : <Typography className="admin-no-data">No comments yet.</Typography>}
             </Box>
-            <Box component="form" onSubmit={handleComment} className="admin-preview-comment-form">
-              <TextField value={commentText} onChange={(event) => setCommentText(event.target.value)} placeholder="Add a comment" size="small" fullWidth multiline maxRows={3} />
-              <Button type="submit" variant="contained" disabled={sendingComment || !commentText.trim()} startIcon={sendingComment ? <CircularProgress size={15} color="inherit" /> : <SendRoundedIcon />}>
-                Post
-              </Button>
-            </Box>
+            {!replyTarget && !loadingComments && renderCommentComposer(false)}
           </Paper>
+
+
         </Box>
       </DialogContent>
     </Dialog>

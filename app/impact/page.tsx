@@ -213,11 +213,13 @@ export default function ImpactPage() {
             </Box>
             <TextField
               label="Anything you want to add?"
+              placeholder="Share a specific example or detail (optional)"
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               multiline
               minRows={3}
               fullWidth
+              slotProps={{ inputLabel: { shrink: true } }}
               helperText={`${description.length} characters`}
             />
           </DialogContent>

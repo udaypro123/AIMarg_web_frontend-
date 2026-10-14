@@ -56,7 +56,7 @@ export default function CareerPage() {
   };
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={3} className="user-career-page">
       <Box className="page-heading-row">
         <Box>
           <Typography className="page-eyebrow">YOUR NEXT CHAPTER</Typography>
@@ -68,7 +68,7 @@ export default function CareerPage() {
 
       {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
 
-      <Box className="journey-summary">
+      <Box className="journey-summary user-journey-summary">
         <Box className="journey-summary-copy">
           <Typography className="impact-overview-label">YOUR JOURNEY</Typography>
           <Typography className="journey-progress-value">{loading ? "—" : `${progress}%`}</Typography>
@@ -101,7 +101,7 @@ export default function CareerPage() {
       {loading ? (
         <Box className="loading-state"><CircularProgress size={25} /></Box>
       ) : (
-        <Stack className="milestone-list" spacing={0}>
+        <Stack className="milestone-list user-milestone-list" spacing={0}>
           {milestones.map((milestone, index) => {
             const definition = CAREER_MILESTONES.find((item) => item.id === milestone.key);
             const isCurrent = !milestone.completed && milestone.key === currentKey;

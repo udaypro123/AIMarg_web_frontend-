@@ -12,6 +12,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  InputAdornment,
   MenuItem,
   Paper,
   Stack,
@@ -26,15 +27,28 @@ import MoreHorizRoundedIcon from "@mui/icons-material/MoreHorizRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
-import { createComment, createPost, deletePost, getComments, getPosts, togglePostLike, updatePost } from "@/services/community.service";
+import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
+import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import { createComment, createPost, deletePost, getComments, getCommunityMembers, getPosts, togglePostLike, updatePost } from "@/services/community.service";
 import { getProfile } from "@/services/user.service";
-import type { Comment, Post, User } from "@/types/api";
+import { getUserInteractionSummaries } from "@/services/admin.service";
+import AdminUserPreview from "@/app/admin/users/_components/AdminUserPreview";
+import type { Comment, Post, User, UserInteractionSummary } from "@/types/api";
 
 const categories = ["AI impact", "Career change", "Learning", "Workplace", "General"];
+type CommunityMember = User & { likeCount: number; commentCount: number; likedByMe: boolean };
+
+const normalizeSearchText = (value: string) =>
+  value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase().trim();
 
 export default function CommunityPage() {
   const [posts, setPosts] = useState<Post[]>([]);
+  const [members, setMembers] = useState<CommunityMember[]>([]);
   const [profile, setProfile] = useState<User | null>(null);
+  const [selectedMember, setSelectedMember] = useState<CommunityMember | null>(null);
+  const [activeSection, setActiveSection] = useState<"people" | "updates">("people");
+  const [selectedRole, setSelectedRole] = useState<"USER" | "HR">("USER");
+  const [directoryQuery, setDirectoryQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [savingPost, setSavingPost] = useState(false);
   const [savingComment, setSavingComment] = useState(false);
@@ -53,11 +67,28 @@ export default function CommunityPage() {
 
   useEffect(() => {
     let active = true;
-    Promise.allSettled([getPosts(), getProfile()]).then((results) => {
+    Promise.allSettled([getPosts(), getProfile(), getCommunityMembers(), getUserInteractionSummaries()]).then((results) => {
       if (!active) return;
       if (results[0].status === "fulfilled") setPosts(results[0].value);
       else setError("Community posts could not be loaded.");
       if (results[1].status === "fulfilled") setProfile(results[1].value);
+      else setError((current) => current || "Your profile could not be loaded.");
+      if (results[2].status === "fulfilled") {
+        const interactions = results[3].status === "fulfilled" ? results[3].value : [];
+        const byUserId = new Map(interactions.map((interaction: UserInteractionSummary) => [interaction.targetUserId, interaction]));
+        setMembers(results[2].value.map((member) => {
+          const interaction = byUserId.get(member._id || "");
+          return {
+            ...member,
+            likeCount: interaction?.likeCount ?? 0,
+            commentCount: interaction?.commentCount ?? 0,
+            likedByMe: interaction?.likedByMe ?? false,
+          };
+        }));
+        if (results[3].status === "rejected") setError((current) => current || "Community interactions could not be loaded.");
+      } else {
+        setError((current) => current || "Community members could not be loaded.");
+      }
       setLoading(false);
     });
     return () => {
@@ -66,10 +97,51 @@ export default function CommunityPage() {
   }, []);
 
   const visiblePosts = useMemo(() => {
-    const search = query.trim().toLowerCase();
-    if (!search) return posts;
-    return posts.filter((post) => [post.title, post.content, post.user.name, post.category || ""].some((value) => value.toLowerCase().includes(search)));
+    const searchTerms = normalizeSearchText(query).split(/\s+/).filter(Boolean);
+    if (!searchTerms.length) return posts;
+    return posts.filter((post) => {
+      const searchableValues = [
+        post.title,
+        post.content,
+        post.user.name,
+        post.user.currentRole,
+        post.user.company,
+        post.category,
+        ...(post.user.skills || []),
+      ].filter((value): value is string => Boolean(value)).map(normalizeSearchText).join(" ");
+      return searchTerms.every((term) =>
+        searchableValues.includes(term)
+      );
+    });
   }, [posts, query]);
+  const visibleMembers = useMemo(() => {
+    const searchTerms = normalizeSearchText(directoryQuery).split(/\s+/).filter(Boolean);
+    const currentUserId = String(profile?._id || profile?.id || "");
+    return members.filter((member) => {
+      const memberId = String(member._id || member.id || "");
+      if (memberId && currentUserId && memberId === currentUserId) return false;
+
+      const roles = (member.roles || []).map((role) => normalizeSearchText(role));
+      if (!roles.includes(normalizeSearchText(selectedRole))) return false;
+
+      const searchableText = [
+        member.name,
+        member.currentRole,
+        member.previousRole,
+        member.company,
+        member.previousCompany,
+        member.jobDescription,
+        member.experience,
+        ...(member.skills || []),
+        ...(member.roles || []),
+        selectedRole === "HR" ? "HR professionals human resources" : "community members",
+      ]
+        .filter((value): value is string => Boolean(value))
+        .map(normalizeSearchText)
+        .join(" ");
+      return searchTerms.every((term) => searchableText.includes(term));
+    });
+  }, [directoryQuery, members, profile, selectedRole]);
 
   const openCreateDialog = () => {
     setEditingPost(null);
@@ -168,21 +240,98 @@ export default function CommunityPage() {
     }
   };
 
+  const applyInteractionChange = (userId: string, interaction: Pick<CommunityMember, "likeCount" | "commentCount" | "likedByMe">) => {
+    setMembers((current) => current.map((member) => member._id === userId ? { ...member, ...interaction } : member));
+    setSelectedMember((current) => current?._id === userId ? { ...current, ...interaction } : current);
+  };
+
   return (
-    <Stack spacing={3}>
-      <Box className="page-heading-row">
+    <Stack spacing={3} className="user-community-page">
+      <Box className="page-heading-row community-page-heading">
         <Box>
           <Typography className="page-eyebrow">PEOPLE IN TRANSITION</Typography>
           <Typography variant="h1" className="page-title">Community</Typography>
           <Typography className="page-subtitle">A place to share what is changing, and what you are learning along the way.</Typography>
         </Box>
-        <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={openCreateDialog}>Share an update</Button>
+        <Stack direction="row" spacing={1} className="community-heading-actions">
+          <Button variant="outlined" onClick={() => setActiveSection("updates")}>Community updates</Button>
+          <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={openCreateDialog}>Share an update</Button>
+        </Stack>
       </Box>
 
       {error && !dialogOpen && !selectedPost && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
 
+      <Box className="community-role-tabs" role="tablist" aria-label="Community members">
+        {(["USER", "HR"] as const).map((role) => (
+          <Button
+            key={role}
+            role="tab"
+            aria-selected={selectedRole === role && activeSection === "people"}
+            className={selectedRole === role && activeSection === "people" ? "is-active" : ""}
+            onClick={() => {
+              setSelectedRole(role);
+              setActiveSection("people");
+            }}
+          >
+            {role === "USER" ? "Members" : "HR professionals"}
+          </Button>
+        ))}
+      </Box>
+
+      {activeSection === "people" ? (
+        <Stack spacing={2.5} className="community-people-section">
+          <Paper className="community-people-toolbar" elevation={0}>
+            <Box>
+              <Typography className="community-people-count">{visibleMembers.length} <span>{selectedRole === "HR" ? "HR professionals" : "community members"}</span></Typography>
+              <Typography className="community-people-caption">Discover profiles and connect with people across the community.</Typography>
+            </Box>
+            <TextField
+              value={directoryQuery}
+              onChange={(event) => setDirectoryQuery(event.target.value)}
+              type="search"
+              placeholder="Search people, roles, or skills"
+              size="small"
+              className="community-people-search"
+              slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchRoundedIcon fontSize="small" /></InputAdornment> } }}
+            />
+          </Paper>
+          {loading ? <Box className="loading-state"><CircularProgress size={25} /></Box> : visibleMembers.length ? (
+            <Box className="community-member-grid">
+              {visibleMembers.map((member) => (
+                <Paper key={member._id} className="community-member-card" elevation={0}>
+                  <Button className="community-member-main" onClick={() => setSelectedMember(member)}>
+                    <Avatar className="community-member-avatar">{member.name?.charAt(0).toUpperCase() || "U"}</Avatar>
+                    <Box className="community-member-identity">
+                      <Typography className="community-member-name">{member.name}</Typography>
+                      <Typography className="community-member-role">{[member.currentRole, member.company].filter(Boolean).join(" at ") || member.roles?.[0] || "Community member"}</Typography>
+                    </Box>
+                    <ArrowForwardRoundedIcon className="community-member-arrow" />
+                  </Button>
+                  {member.skills?.length ? (
+                    <Box className="community-member-skills">
+                      {member.skills.slice(0, 4).map((skill) => <span key={skill}>{skill}</span>)}
+                      {member.skills.length > 4 && <small>+{member.skills.length - 4}</small>}
+                    </Box>
+                  ) : null}
+                  {member.jobDescription && <Typography className="community-member-description">{member.jobDescription}</Typography>}
+                  <Box className="community-member-footer">
+                    <span><FavoriteRoundedIcon /> {member.likeCount} likes</span>
+                    <span><ChatBubbleOutlineRoundedIcon /> {member.commentCount} comments</span>
+                  </Box>
+                </Paper>
+              ))}
+            </Box>
+          ) : (
+            <Paper className="empty-state community-member-empty" elevation={0}>
+              <Typography variant="h3">{directoryQuery.trim() ? "No matching profiles" : `No ${selectedRole === "HR" ? "HR professionals" : "members"} to show`}</Typography>
+              <Typography variant="body2">{directoryQuery.trim() ? "Try another name, role, or skill." : "Discoverable profiles will appear here."}</Typography>
+            </Paper>
+          )}
+        </Stack>
+      ) : (
       <Box className="community-layout">
         <Box className="community-feed-column">
+          <Button className="community-back-to-people" onClick={() => setActiveSection("people")}>Browse members and HR professionals</Button>
           <Paper className="community-composer" elevation={0}>
             <Avatar className="post-avatar">{profile?.name?.charAt(0).toUpperCase() || "U"}</Avatar>
             <Button className="composer-prompt" onClick={openCreateDialog}>What have you learned about work changing?</Button>
@@ -196,7 +345,7 @@ export default function CommunityPage() {
               {!query && <Button variant="outlined" onClick={openCreateDialog}>Write the first update</Button>}
             </Paper>
           ) : (
-            <Stack spacing={1.5}>
+            <Stack spacing={1.5} className="community-post-list">
               {visiblePosts.map((post) => {
                 const isLiked = Boolean(profile?._id && post.likes.includes(profile._id));
                 const isOwner = Boolean(profile?._id && post.user._id === profile._id);
@@ -245,6 +394,7 @@ export default function CommunityPage() {
           </Paper>
         </Box>
       </Box>
+      )}
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
         <Box component="form" onSubmit={submitPost}>
@@ -254,11 +404,11 @@ export default function CommunityPage() {
           </DialogTitle>
           <DialogContent className="assessment-form">
             {error && <Alert severity="error">{error}</Alert>}
-            <TextField label="Title" value={title} onChange={(event) => setTitle(event.target.value)} required fullWidth />
+            <TextField label="Title" placeholder="Give your update a title" value={title} onChange={(event) => setTitle(event.target.value)} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
             <TextField select label="Topic" value={category} onChange={(event) => setCategory(event.target.value)} fullWidth>
               {categories.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}
             </TextField>
-            <TextField label="Your update" value={content} onChange={(event) => setContent(event.target.value)} required multiline minRows={5} fullWidth />
+            <TextField label="Your update" placeholder="Share what's changed or what you've learned" value={content} onChange={(event) => setContent(event.target.value)} required multiline minRows={5} fullWidth slotProps={{ inputLabel: { shrink: true } }} />
           </DialogContent>
           <DialogActions className="dialog-actions">
             <Button onClick={() => setDialogOpen(false)} color="inherit">Cancel</Button>
@@ -294,6 +444,16 @@ export default function CommunityPage() {
           </Box>
         </DialogActions>
       </Dialog>
+
+      {selectedMember && (
+        <AdminUserPreview
+          user={selectedMember}
+          open
+          onClose={() => setSelectedMember(null)}
+          onInteractionChange={applyInteractionChange}
+          showFullProfile={false}
+        />
+      )}
     </Stack>
   );
 }

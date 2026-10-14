@@ -53,22 +53,24 @@ export default function ResetPasswordPage() {
             <Stack spacing={1.8}>
               <TextField
                 label="New password"
+                placeholder="Create a new password (8+ characters)"
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                slotProps={{ htmlInput: { minLength: 8, autoComplete: "new-password" } }}
                 required
                 fullWidth
                 autoFocus
+                slotProps={{ inputLabel: { shrink: true }, htmlInput: { minLength: 8, autoComplete: "new-password" } }}
               />
               <TextField
                 label="Confirm new password"
+                placeholder="Re-enter your new password"
                 type="password"
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
-                slotProps={{ htmlInput: { minLength: 8, autoComplete: "new-password" } }}
                 required
                 fullWidth
+                slotProps={{ inputLabel: { shrink: true }, htmlInput: { minLength: 8, autoComplete: "new-password" } }}
               />
               <PrimaryButton type="submit" fullWidth loading={loading} size="large" className="auth-submit-button">
                 Update password

@@ -60,6 +60,7 @@ export default function ForgotPasswordPage() {
                 <Stack spacing={1.8}>
                   <TextField
                     label="Email address"
+                    placeholder="you@example.com"
                     type="email"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
@@ -67,7 +68,7 @@ export default function ForgotPasswordPage() {
                     fullWidth
                     autoFocus
                     autoComplete="email"
-                    slotProps={{ input: emailSlotProps }}
+                    slotProps={{ input: emailSlotProps, inputLabel: { shrink: true } }}
                   />
                   <PrimaryButton type="submit" fullWidth loading={loading} size="large" className="auth-submit-button">
                     Send reset link

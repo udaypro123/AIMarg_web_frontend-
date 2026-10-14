@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Providers } from "@/providers/ThemeProvider";
@@ -16,12 +16,12 @@ import {
   Menu,
   MenuItem,
   Stack,
+  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
-import RouteRoundedIcon from "@mui/icons-material/RouteRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
@@ -29,14 +29,15 @@ import NotificationsNoneRoundedIcon from "@mui/icons-material/NotificationsNoneR
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import { getMe, logout } from "@/services/auth.service";
 import { getNotifications, markNotificationRead } from "@/services/notification.service";
+import { addAdminUserComment } from "@/services/admin.service";
+import { createComment } from "@/services/community.service";
 import type { AppNotification, User } from "@/types/api";
 
 const primaryNav = [
   { label: "Overview", href: "/", icon: <DashboardRoundedIcon /> },
-  { label: "AI impact", href: "/impact", icon: <InsightsRoundedIcon /> },
-  { label: "Career path", href: "/career", icon: <RouteRoundedIcon /> },
-  { label: "Skills", href: "/skills", icon: <AutoAwesomeRoundedIcon /> },
   { label: "Community", href: "/community", icon: <GroupsRoundedIcon /> },
+  { label: "AI impact", href: "/impact", icon: <InsightsRoundedIcon /> },
+  { label: "Skills", href: "/skills", icon: <AutoAwesomeRoundedIcon /> },
 ];
 
 const adminNav = [
@@ -67,10 +68,11 @@ export default function RootLayoutClient({ children }: { children: React.ReactNo
   const [authChecked, setAuthChecked] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [notificationAnchor, setNotificationAnchor] = useState<HTMLElement | null>(null);
-  const [notificationsLoaded, setNotificationsLoaded] = useState(false);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationError, setNotificationError] = useState(false);
-  const isAuthRoute = pathname.startsWith("/auth/") || pathname === "/onboarding";
+  const [replyingNotificationId, setReplyingNotificationId] = useState<string | null>(null);
+  const [notificationReply, setNotificationReply] = useState("");
+  const isAuthRoute = pathname.startsWith("/auth/") || pathname === "/onboarding" || pathname === "/how-it-works";
   const isAdmin = Boolean(user?.roles?.some((role) => role === "ADMIN" || role === "SUPER_ADMIN"));
   const isHR = Boolean(user?.roles?.includes("HR"));
   const navigationItems = isAdmin ? adminNav : isHR ? hrNav : primaryNav;
@@ -102,6 +104,28 @@ export default function RootLayoutClient({ children }: { children: React.ReactNo
     };
   }, [isAuthRoute, router]);
 
+  const refreshNotifications = useCallback(async () => {
+    setNotificationsLoading(true);
+    setNotificationError(false);
+    try {
+      setNotifications(await getNotifications());
+    } catch {
+      setNotificationError(true);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!authChecked || isAuthRoute) return;
+    const initialLoad = window.setTimeout(() => void refreshNotifications(), 0);
+    const interval = window.setInterval(() => void refreshNotifications(), 30_000);
+    return () => {
+      window.clearTimeout(initialLoad);
+      window.clearInterval(interval);
+    };
+  }, [authChecked, isAuthRoute, refreshNotifications]);
+
   useEffect(() => {
     if (!authChecked || pathname !== "/") return;
     if (isAdmin) router.replace("/admin");
@@ -121,17 +145,7 @@ export default function RootLayoutClient({ children }: { children: React.ReactNo
 
   const openNotifications = async (event: React.MouseEvent<HTMLElement>) => {
     setNotificationAnchor(event.currentTarget);
-    if (notificationsLoaded || notificationsLoading) return;
-    setNotificationsLoading(true);
-    setNotificationError(false);
-    try {
-      setNotifications(await getNotifications());
-      setNotificationsLoaded(true);
-    } catch {
-      setNotificationError(true);
-    } finally {
-      setNotificationsLoading(false);
-    }
+    await refreshNotifications();
   };
 
   const handleNotificationClick = async (notification: AppNotification) => {
@@ -142,6 +156,33 @@ export default function RootLayoutClient({ children }: { children: React.ReactNo
       } catch {
         setNotificationError(true);
       }
+    }
+    if (!notification.commentId) {
+      router.push("/community");
+      setNotificationAnchor(null);
+    }
+  };
+
+  const handleNotificationReply = async (
+    event: FormEvent<HTMLFormElement>,
+    notification: AppNotification
+  ) => {
+    event.preventDefault();
+    const content = notificationReply.trim();
+    if (!content || !notification.targetId || !notification.commentId) return;
+    try {
+      if (notification.targetType === "profile") {
+        await addAdminUserComment(notification.targetId, content, notification.commentId);
+      } else if (notification.targetType === "post") {
+        await createComment(notification.targetId, content, notification.commentId);
+      } else {
+        return;
+      }
+      setNotificationReply("");
+      setReplyingNotificationId(null);
+      await refreshNotifications();
+    } catch {
+      setNotificationError(true);
     }
   };
 
@@ -247,14 +288,45 @@ export default function RootLayoutClient({ children }: { children: React.ReactNo
               ) : notifications.length === 0 ? (
                 <MenuItem disabled>No notifications yet</MenuItem>
               ) : notifications.slice(0, 8).map((notification) => (
-                <MenuItem key={notification._id} onClick={() => void handleNotificationClick(notification)} className={`notification-menu-item${notification.read ? " is-read" : ""}`}>
-                  <span className="notification-status" />
-                  <span className="notification-copy">
-                    <strong>{notification.title}</strong>
-                    <span>{notification.body}</span>
-                    <small>{new Date(notification.createdAt).toLocaleDateString()}</small>
-                  </span>
-                </MenuItem>
+                <Box key={notification._id} className={`notification-menu-entry${notification.read ? " is-read" : ""}`}>
+                  <MenuItem onClick={() => void handleNotificationClick(notification)} className={`notification-menu-item${notification.read ? " is-read" : ""}`}>
+                    <span className="notification-status" />
+                    <span className="notification-copy">
+                      <strong>{notification.title}</strong>
+                      <span>{notification.body}</span>
+                      <small>{new Date(notification.createdAt).toLocaleDateString()}</small>
+                    </span>
+                  </MenuItem>
+                  {notification.commentId && notification.targetType && notification.targetId && (
+                    <Box className="notification-reply-area">
+                      {replyingNotificationId === notification._id ? (
+                        <Box component="form" onSubmit={(event) => void handleNotificationReply(event, notification)} className="notification-reply-form">
+                          <TextField
+                            size="small"
+                            fullWidth
+                            value={notificationReply}
+                            onChange={(event) => setNotificationReply(event.target.value)}
+                            placeholder="Write a reply..."
+                            slotProps={{ htmlInput: { maxLength: 500, "aria-label": "Write a notification reply" } }}
+                          />
+                          <Button size="small" type="submit" disabled={!notificationReply.trim()}>
+                            Send
+                          </Button>
+                        </Box>
+                      ) : (
+                        <Button
+                          size="small"
+                          onClick={() => {
+                            setReplyingNotificationId(notification._id);
+                            setNotificationReply("");
+                          }}
+                        >
+                          Reply
+                        </Button>
+                      )}
+                    </Box>
+                  )}
+                </Box>
               ))}
             </Menu>
             <Box component="main" className="workspace-content">

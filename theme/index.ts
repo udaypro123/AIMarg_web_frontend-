@@ -89,7 +89,7 @@ export const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: "sans-serif",
+    fontFamily: '"Lato", "Segoe UI", Arial, sans-serif',
     h1: {
       fontSize: "calc(2.5rem + 2px)",
       fontWeight: 700,

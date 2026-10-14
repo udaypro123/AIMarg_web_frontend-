@@ -8,6 +8,9 @@ import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import DeleteForeverRoundedIcon from "@mui/icons-material/DeleteForeverRounded";
+import BusinessRoundedIcon from "@mui/icons-material/BusinessRounded";
+import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
+import WorkOutlineRoundedIcon from "@mui/icons-material/WorkOutlineRounded";
 import { deleteMyAccount, downloadResume, getProfile, updateProfile, uploadResume } from "@/services/user.service";
 import { setAccessToken } from "@/services/api";
 import type { User } from "@/types/api";
@@ -240,14 +243,19 @@ export default function ProfilePage() {
     (profile.notificationPreferences?.whatsapp ?? false) !== (initialProfile.notificationPreferences?.whatsapp ?? false)
   ));
   const hasSkillsChanges = Boolean(initialProfile && skillsInput !== (initialProfile.skills || []).join(", "));
+  const isHRProfile = Boolean(profile?.roles?.includes("HR"));
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={3} className={isHRProfile ? "profile-page is-hr-profile" : "profile-page"}>
       <Box className="page-heading-row">
         <Box>
-          <Typography className="page-eyebrow">ACCOUNT DETAILS</Typography>
-          <Typography variant="h1" className="page-title">Your profile</Typography>
-          <Typography className="page-subtitle">Keep your career details and contact information up to date.</Typography>
+          <Typography className="page-eyebrow">{isHRProfile ? "HR WORKSPACE" : "ACCOUNT DETAILS"}</Typography>
+          <Typography variant="h1" className="page-title">{isHRProfile ? "Your HR profile" : "Your profile"}</Typography>
+          <Typography className="page-subtitle">
+            {isHRProfile
+              ? "Help candidates understand your role, organization, and professional expertise."
+              : "Keep your career details and contact information up to date."}
+          </Typography>
         </Box>
         {profile && <Avatar className="profile-large-avatar">{profile.name?.charAt(0).toUpperCase() || "U"}</Avatar>}
       </Box>
@@ -255,43 +263,75 @@ export default function ProfilePage() {
       {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
       {loading ? <Box className="loading-state"><CircularProgress size={25} /></Box> : profile && (
         <>
+          {isHRProfile && (
+            <Paper className="hr-profile-summary" elevation={0}>
+              <Box className="hr-profile-summary-identity">
+                <Avatar className="hr-profile-summary-avatar">{profile.name?.charAt(0).toUpperCase() || "H"}</Avatar>
+                <Box className="hr-profile-summary-copy">
+                  <Typography className="hr-profile-summary-eyebrow">HR PROFILE SNAPSHOT</Typography>
+                  <Typography className="hr-profile-summary-name">{profile.name}</Typography>
+                  <Typography className="hr-profile-summary-role">
+                    {[profile.currentRole, profile.company].filter(Boolean).join(" at ") || "Add your role and organization below"}
+                  </Typography>
+                </Box>
+              </Box>
+              <Box className="hr-profile-summary-facts">
+                <Box className="hr-profile-summary-fact">
+                  <WorkOutlineRoundedIcon />
+                  <span><strong>{profile.experience || "Add experience"}</strong><small>Experience</small></span>
+                </Box>
+                <Box className="hr-profile-summary-fact">
+                  <GroupsRoundedIcon />
+                  <span><strong>{profile.skills?.length ?? 0} skills</strong><small>Expertise</small></span>
+                </Box>
+                <Box className="hr-profile-summary-fact">
+                  <BusinessRoundedIcon />
+                  <span><strong>{profile.privacySettings?.profileDiscoverable ?? true ? "Discoverable" : "Private"}</strong><small>Profile visibility</small></span>
+                </Box>
+              </Box>
+              <Typography className="hr-profile-summary-hint">
+                Keep your role, organization, expertise, and LinkedIn details current so candidates can recognize your HR profile.
+              </Typography>
+            </Paper>
+          )}
+
           <Box className="profile-layout">
             <Stack spacing={2.5}>
               <Paper className="profile-section" elevation={0}>
                 <Box className="section-heading-row">
                   <Box>
-                    <Typography className="impact-overview-label">BASICS</Typography>
-                    <Typography variant="h2" className="section-title">Personal details</Typography>
+                    <Typography className="impact-overview-label">{isHRProfile ? "YOUR IDENTITY" : "BASICS"}</Typography>
+                    <Typography variant="h2" className="section-title">{isHRProfile ? "Personal & contact details" : "Personal details"}</Typography>
                   </Box>
                 </Box>
                 <Box className="profile-form-grid">
-                  <TextField label="Full name" value={profile.name || ""} onChange={(event) => updateField("name", event.target.value)} required fullWidth />
+                  <TextField label="Full name" placeholder="Enter your full name" value={profile.name || ""} onChange={(event) => updateField("name", event.target.value)} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
                   <TextField label="Email address" value={profile.email || ""} disabled required fullWidth helperText="Email address is managed by your sign-in settings." />
-                  <TextField label="Country" value={profile.country || ""} onChange={(event) => updateField("country", event.target.value)} required fullWidth />
+                  <TextField label="Country" placeholder="Enter your country" value={profile.country || ""} onChange={(event) => updateField("country", event.target.value)} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
                 </Box>
               </Paper>
 
               <Paper className="profile-section" elevation={0}>
                 <Box className="section-heading-row">
                   <Box>
-                    <Typography className="impact-overview-label">CAREER</Typography>
-                    <Typography variant="h2" className="section-title">Professional details</Typography>
+                    <Typography className="impact-overview-label">{isHRProfile ? "HR CAREER" : "CAREER"}</Typography>
+                    <Typography variant="h2" className="section-title">{isHRProfile ? "Role & expertise" : "Professional details"}</Typography>
                   </Box>
                 </Box>
                 <Box className="profile-form-grid">
-                  <TextField label="Current role" value={profile.currentRole || ""} onChange={(event) => updateField("currentRole", event.target.value)} required fullWidth />
-                  <TextField label="Company" value={profile.company || ""} onChange={(event) => updateField("company", event.target.value)} required fullWidth />
-                  <TextField label="Experience" value={profile.experience || ""} onChange={(event) => updateField("experience", event.target.value)} required fullWidth />
-                  <TextField label="Previous role" value={profile.previousRole || ""} onChange={(event) => updateField("previousRole", event.target.value)} required fullWidth />
-                  <TextField label="Previous company" value={profile.previousCompany || ""} onChange={(event) => updateField("previousCompany", event.target.value)} required fullWidth />
-                  <TextField label="How you use AI" value={profile.aiUsage || ""} onChange={(event) => updateField("aiUsage", event.target.value)} fullWidth />
-                  <TextField label="Skills (comma separated)" value={skillsInput} onChange={(event) => {
+                  <TextField label={isHRProfile ? "HR role / job title" : "Current role"} placeholder={isHRProfile ? "e.g. Talent Acquisition Partner" : "e.g. Product designer"} value={profile.currentRole || ""} onChange={(event) => updateField("currentRole", event.target.value)} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
+                  <TextField label={isHRProfile ? "Organization" : "Company"} placeholder="Enter your company name" value={profile.company || ""} onChange={(event) => updateField("company", event.target.value)} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
+                  <TextField label={isHRProfile ? "HR / professional experience" : "Experience"} placeholder="e.g. 5 years" value={profile.experience || ""} onChange={(event) => updateField("experience", event.target.value)} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
+                  <TextField label="Previous role" placeholder="Enter your previous role" value={profile.previousRole || ""} onChange={(event) => updateField("previousRole", event.target.value)} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
+                  <TextField label="Previous company" placeholder="Enter your previous company" value={profile.previousCompany || ""} onChange={(event) => updateField("previousCompany", event.target.value)} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
+                  <TextField label="How you use AI" placeholder="Describe how AI fits into your work" value={profile.aiUsage || ""} onChange={(event) => updateField("aiUsage", event.target.value)} fullWidth slotProps={{ inputLabel: { shrink: true } }} />
+                  <TextField label={isHRProfile ? "Recruiting skills & expertise" : "Skills (comma separated)"} placeholder={isHRProfile ? "e.g. Talent acquisition, interviewing, HR" : "e.g. Research, communication, Python"} value={skillsInput} onChange={(event) => {
                     setSaved(false);
                     setSkillsInput(event.target.value);
-                  }} required fullWidth />
-                  <TextField label="LinkedIn URL" value={profile.linkedinUrl || ""} onChange={(event) => updateField("linkedinUrl", event.target.value)} required fullWidth />
-                  <TextField label="GitHub URL" value={profile.githubUrl || ""} onChange={(event) => updateField("githubUrl", event.target.value)} required fullWidth />
-                  <TextField label="Role description" value={profile.jobDescription || ""} onChange={(event) => updateField("jobDescription", event.target.value)} required multiline minRows={3} className="profile-description-field" fullWidth />
+                  }} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
+                  <TextField label="LinkedIn URL" placeholder="https://linkedin.com/in/your-name" value={profile.linkedinUrl || ""} onChange={(event) => updateField("linkedinUrl", event.target.value)} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
+                  <TextField label="GitHub URL" placeholder="https://github.com/your-username" value={profile.githubUrl || ""} onChange={(event) => updateField("githubUrl", event.target.value)} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
+                  <TextField label={isHRProfile ? "About your HR role" : "Role description"} placeholder={isHRProfile ? "Describe your hiring focus and how you support candidates" : "Describe your role and responsibilities"} value={profile.jobDescription || ""} onChange={(event) => updateField("jobDescription", event.target.value)} required multiline minRows={3} className="profile-description-field" fullWidth slotProps={{ inputLabel: { shrink: true } }} />
                 </Box>
               </Paper>
             </Stack>
@@ -436,8 +476,10 @@ export default function ProfilePage() {
             autoFocus
             fullWidth
             label="Type DELETE to confirm"
+            placeholder="Type DELETE here"
             value={deleteConfirmation}
             onChange={(event) => setDeleteConfirmation(event.target.value)}
+            slotProps={{ inputLabel: { shrink: true } }}
             sx={{ mt: 2 }}
           />
         </DialogContent>
