@@ -59,17 +59,20 @@ export default function ProfilePage() {
 
   const saveProfile = async () => {
     if (!profile) return;
+    const isHRProfile = profile.roles?.includes("HR") ?? false;
     const requiredFields: Array<[string, string | undefined]> = [
       ["Full name", profile.name],
       ["Country", profile.country],
       ["Experience", profile.experience],
       ["Current role", profile.currentRole],
-      ["Previous role", profile.previousRole],
-      ["Previous company", profile.previousCompany],
+      ...(!isHRProfile ? [
+        ["Previous role", profile.previousRole],
+        ["Previous company", profile.previousCompany],
+      ] as Array<[string, string | undefined]> : []),
       ["Company", profile.company],
       ["Job description", profile.jobDescription],
       ["LinkedIn URL", profile.linkedinUrl],
-      ["GitHub URL", profile.githubUrl],
+      ...(!isHRProfile ? [["GitHub URL", profile.githubUrl] as [string, string | undefined]] : []),
       ["Resume", profile.resume],
     ];
     const missingFields = requiredFields
@@ -81,11 +84,13 @@ export default function ProfilePage() {
       setError(`Complete all required fields: ${missingFields.join(", ")}.`);
       return;
     }
-    const invalidUrls = [
+    const urlsToValidate: Array<[string, string | undefined]> = [
       ["LinkedIn URL", profile.linkedinUrl],
-      ["GitHub URL", profile.githubUrl],
-    ].filter(([, value]) => {
+      ...(!isHRProfile ? [["GitHub URL", profile.githubUrl] as [string, string | undefined]] : []),
+    ];
+    const invalidUrls = urlsToValidate.filter(([, value]) => {
       try {
+        if (!value?.trim()) return false;
         const url = new URL(value!);
         return url.protocol !== "https:" && url.protocol !== "http:";
       } catch {
@@ -315,15 +320,15 @@ export default function ProfilePage() {
                   <TextField label={isHRProfile ? "HR role / job title" : "Current role"} placeholder={isHRProfile ? "e.g. Talent Acquisition Partner" : "e.g. Product designer"} value={profile.currentRole || ""} onChange={(event) => updateField("currentRole", event.target.value)} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
                   <TextField label={isHRProfile ? "Organization" : "Company"} placeholder="Enter your company name" value={profile.company || ""} onChange={(event) => updateField("company", event.target.value)} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
                   <TextField label={isHRProfile ? "HR / professional experience" : "Experience"} placeholder="e.g. 5 years" value={profile.experience || ""} onChange={(event) => updateField("experience", event.target.value)} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
-                  <TextField label="Previous role" placeholder="Enter your previous role" value={profile.previousRole || ""} onChange={(event) => updateField("previousRole", event.target.value)} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
-                  <TextField label="Previous company" placeholder="Enter your previous company" value={profile.previousCompany || ""} onChange={(event) => updateField("previousCompany", event.target.value)} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
+                  <TextField label="Previous role" placeholder="Enter your previous role" value={profile.previousRole || ""} onChange={(event) => updateField("previousRole", event.target.value)} required={!isHRProfile} fullWidth slotProps={{ inputLabel: { shrink: true } }} />
+                  <TextField label="Previous company" placeholder="Enter your previous company" value={profile.previousCompany || ""} onChange={(event) => updateField("previousCompany", event.target.value)} required={!isHRProfile} fullWidth slotProps={{ inputLabel: { shrink: true } }} />
                   <TextField label="How you use AI" placeholder="Describe how AI fits into your work" value={profile.aiUsage || ""} onChange={(event) => updateField("aiUsage", event.target.value)} fullWidth slotProps={{ inputLabel: { shrink: true } }} />
                   <TextField label={isHRProfile ? "Recruiting skills & expertise" : "Skills (comma separated)"} placeholder={isHRProfile ? "e.g. Talent acquisition, interviewing, HR" : "e.g. Research, communication, Python"} value={skillsInput} onChange={(event) => {
                     setSaved(false);
                     setSkillsInput(event.target.value);
                   }} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
                   <TextField label="LinkedIn URL" placeholder="https://linkedin.com/in/your-name" value={profile.linkedinUrl || ""} onChange={(event) => updateField("linkedinUrl", event.target.value)} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
-                  <TextField label="GitHub URL" placeholder="https://github.com/your-username" value={profile.githubUrl || ""} onChange={(event) => updateField("githubUrl", event.target.value)} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
+                  <TextField label="GitHub URL" placeholder="https://github.com/your-username" value={profile.githubUrl || ""} onChange={(event) => updateField("githubUrl", event.target.value)} required={!isHRProfile} fullWidth slotProps={{ inputLabel: { shrink: true } }} />
                   <TextField label={isHRProfile ? "About your HR role" : "Role description"} placeholder={isHRProfile ? "Describe your hiring focus and how you support candidates" : "Describe your role and responsibilities"} value={profile.jobDescription || ""} onChange={(event) => updateField("jobDescription", event.target.value)} required multiline minRows={3} className="profile-description-field" fullWidth slotProps={{ inputLabel: { shrink: true } }} />
 
 
