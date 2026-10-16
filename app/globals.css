@@ -2010,6 +2010,25 @@ a {
   text-align: center;
 }
 
+.admin-user-type-tabs.MuiPaper-root {
+  overflow: hidden;
+  border: 1px solid #d4d4e0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgb(29 29 73 / 4%);
+}
+
+.admin-user-type-tabs .MuiTab-root {
+  min-height: 52px;
+  color: #555563;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.admin-user-type-tabs .MuiTab-root.Mui-selected { color: #17176f; }
+.admin-user-type-tabs .MuiTabs-indicator { height: 3px; background: #17176f; }
+
 .admin-users-toolbar {
   display: flex;
   align-items: center;
@@ -2028,8 +2047,24 @@ a {
 .admin-search { width: min(310px, 42vw); }
 .admin-status-filter { width: 145px; }
 .admin-users-filters .MuiOutlinedInput-root { min-height: 48px; background: #fff; font-size: 14.4px; }
+.admin-users-filters .MuiOutlinedInput-notchedOutline { border-color: #a9a9ba; }
+.admin-users-filters .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline { border-color: #555563; }
+.admin-users-filters .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline { border-color: #17176f; border-width: 2px; }
+.admin-users-filters .MuiInputBase-input,
+.admin-users-filters .MuiSelect-select { color: #111118; }
+.admin-users-filters .MuiInputBase-input::placeholder { color: #626274; opacity: 1; }
 .admin-users-filters .MuiInputLabel-root { font-size: 13.5px; }
-.admin-users-filters .MuiSvgIcon-root { color: #626274; }
+.admin-users-filters .MuiSvgIcon-root { color: #454554; }
+.admin-status-menu.MuiPaper-root {
+  background: #fff !important;
+  color: #111118 !important;
+  border: 1px solid #d4d4e0;
+  box-shadow: 0 8px 24px rgb(29 29 73 / 14%);
+}
+.admin-status-menu .MuiMenuItem-root { color: #111118 !important; }
+.admin-status-menu .MuiMenuItem-root:hover { background: #f1f1fa; }
+.admin-status-menu .MuiMenuItem-root.Mui-selected { background: #e9e9ff; color: #17176f !important; }
+.admin-status-menu .MuiMenuItem-root.Mui-selected:hover { background: #dedfff; }
 
 .admin-user-list { min-width: 0; }
 

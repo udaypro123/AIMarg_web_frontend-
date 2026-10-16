@@ -17,6 +17,8 @@ import {
   MenuItem,
   Paper,
   Stack,
+  Tab,
+  Tabs,
   TextField,
   Typography,
 } from "@mui/material";
@@ -29,7 +31,6 @@ import AdminAccess from "../_components/AdminAccess";
 import AdminUserPreview from "./_components/AdminUserPreview";
 import { getRequestErrorMessage } from "@/services/api";
 import {
-  getAdminDashboardStats,
   getAdminUsers,
   getUserInteractionSummaries,
   setAdminUserBlocked,
@@ -37,11 +38,11 @@ import {
 import type { User } from "@/types/api";
 
 type UserStatus = "all" | "active" | "blocked";
+type AccountType = "user" | "hr";
 type ManagedUser = User & { likeCount: number; commentCount: number; likedByMe: boolean };
 
 function AdminUsers({ admin }: { admin: User }) {
   const [users, setUsers] = useState<ManagedUser[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -49,21 +50,17 @@ function AdminUsers({ admin }: { admin: User }) {
   const [selectedUser, setSelectedUser] = useState<ManagedUser | null>(null);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<UserStatus>("all");
+  const [accountType, setAccountType] = useState<AccountType>("user");
   const [error, setError] = useState("");
   const [reload, setReload] = useState(0);
   const mayBlockUsers = Boolean(admin.roles?.some((role) => role === "ADMIN" || role === "SUPER_ADMIN"));
 
   useEffect(() => {
     let active = true;
-    Promise.all([
-      getAdminDashboardStats(),
-      getAdminUsers(),
-      getUserInteractionSummaries(),
-    ])
-      .then(([stats, accountList, summary]) => {
+    Promise.all([getAdminUsers(), getUserInteractionSummaries()])
+      .then(([accountList, summary]) => {
         if (!active) return;
         const byUser = new Map(summary.map((item) => [item.targetUserId, item]));
-        setTotalCount(stats.totalUsers);
         setUsers(accountList.map((account) => {
           const interaction = byUser.get(account._id || "");
           return {
@@ -92,13 +89,20 @@ function AdminUsers({ admin }: { admin: User }) {
   const visibleUsers = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return users.filter((account) => {
+      const isHr = account.roles?.includes("HR") ?? false;
+      if (accountType === "hr" ? !isHr : isHr) return false;
       if (status === "active" && account.isBlocked) return false;
       if (status === "blocked" && !account.isBlocked) return false;
       if (!normalizedQuery) return true;
       return [account.name, account.email, account.currentRole, account.company, ...(account.skills || [])]
         .some((value) => value?.toLowerCase().includes(normalizedQuery));
     });
-  }, [query, status, users]);
+  }, [accountType, query, status, users]);
+
+  const accountTypeCounts = useMemo(() => ({
+    user: users.filter((account) => !account.roles?.includes("HR")).length,
+    hr: users.filter((account) => account.roles?.includes("HR")).length,
+  }), [users]);
 
   const refresh = () => {
     setRefreshing(true);
@@ -146,21 +150,47 @@ function AdminUsers({ admin }: { admin: User }) {
 
       {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
 
+      <Paper className="admin-user-type-tabs" elevation={0}>
+        <Tabs
+          value={accountType}
+          onChange={(_, value: AccountType) => setAccountType(value)}
+          aria-label="Filter accounts by role"
+          variant="fullWidth"
+        >
+          <Tab value="user" label={`Users (${accountTypeCounts.user})`} />
+          <Tab value="hr" label={`HR (${accountTypeCounts.hr})`} />
+        </Tabs>
+      </Paper>
+
       <Box className="admin-users-toolbar">
-        <Typography className="admin-users-count"><strong>{totalCount}</strong> accounts</Typography>
+        <Typography className="admin-users-count"><strong>{visibleUsers.length}</strong> {accountType === "hr" ? "HR accounts" : "user accounts"}</Typography>
         <Box className="admin-users-filters">
           <TextField
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search users"
+            placeholder={accountType === "hr" ? "Search HR accounts" : "Search users"}
             size="small"
             className="admin-search"
             slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchRoundedIcon fontSize="small" /></InputAdornment> } }}
           />
-          <TextField select size="small" label="Status" value={status} onChange={(event) => setStatus(event.target.value as UserStatus)} className="admin-status-filter">
-            <MenuItem value="all">All accounts</MenuItem>
-            <MenuItem value="active">Active</MenuItem>
-            <MenuItem value="blocked">Blocked</MenuItem>
+          <TextField
+            select
+            size="small"
+            label="Status"
+            value={status}
+            onChange={(event) => setStatus(event.target.value as UserStatus)}
+            className="admin-status-filter"
+            slotProps={{
+              select: {
+                MenuProps: {
+                  slotProps: { paper: { className: "admin-status-menu" } },
+                },
+              },
+            }}
+          >
+            <MenuItem value="all" sx={{ color: "#111118" }}>All accounts</MenuItem>
+            <MenuItem value="active" sx={{ color: "#111118" }}>Active</MenuItem>
+            <MenuItem value="blocked" sx={{ color: "#111118" }}>Blocked</MenuItem>
           </TextField>
         </Box>
       </Box>
