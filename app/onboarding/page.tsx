@@ -104,6 +104,10 @@ export default function OnboardingPage() {
     }
 
     if (activeStep === 2) {
+      if (selectedSkills.length === 0) {
+        setActiveStep(3);
+        return;
+      }
       setSaving(true);
       try {
         const updated = await updateProfile({ skills: selectedSkills });

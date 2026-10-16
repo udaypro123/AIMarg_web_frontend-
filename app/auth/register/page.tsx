@@ -151,6 +151,14 @@ export default function RegisterPage() {
                 fullWidth
                 autoComplete="email"
                 disabled={Boolean(signupToken)}
+                sx={{
+                  "& .MuiInputBase-input": { color: "#000" },
+                  "& .MuiInputBase-input.Mui-disabled": {
+                    color: "#000",
+                    WebkitTextFillColor: "#000",
+                    opacity: 1,
+                  },
+                }}
                 slotProps={{ input: emailSlotProps, inputLabel: { shrink: true } }}
               />
               {!signupToken && (
