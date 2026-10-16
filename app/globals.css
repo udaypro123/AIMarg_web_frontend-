@@ -2198,7 +2198,18 @@ a {
 .admin-skill-list { display: flex; flex-wrap: wrap; gap: 7px; }
 .admin-skill-list .MuiChip-root { border: 1px solid #dedefa; background: #f4f4ff; color: #2929a8; font-size: 10.8px; }
 .admin-profile-links { display: flex; flex-wrap: wrap; gap: 8px; }
-.admin-profile-links .MuiButton-root { font-size: 10.8px; }
+.admin-profile-links .MuiButton-root {
+  min-height: 40px;
+  border-color: #b8b8d2;
+  color: #17176f;
+  font-size: 12px;
+  font-weight: 700;
+}
+.admin-profile-links .MuiButton-root:hover {
+  border-color: #17176f;
+  background: #f1f1ff;
+}
+.admin-profile-links .MuiButton-root .MuiSvgIcon-root { color: #17176f; }
 .admin-resume-note { grid-column: 1 / -1; }
 
 .admin-managed-user-main.MuiButton-root {
