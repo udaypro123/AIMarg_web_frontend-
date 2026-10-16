@@ -6,10 +6,12 @@ import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import PeopleAltRoundedIcon from "@mui/icons-material/PeopleAltRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import Loading from "@/components/common/Loading";
 import HRAccess from "../_components/HRAccess";
 import AdminUserPreview from "@/app/admin/users/_components/AdminUserPreview";
+import { getRequestErrorMessage } from "@/services/api";
 import { getAdminDashboardStats, getAdminUsers, getUserInteractionSummaries } from "@/services/admin.service";
-import type { AdminStats, User, UserInteractionSummary } from "@/types/api";
+import type { AdminStats, User } from "@/types/api";
 
 type Candidate = User & { likeCount: number; commentCount: number; likedByMe: boolean };
 
@@ -28,7 +30,7 @@ function CandidateDirectory({ user }: { user: User }) {
     Promise.all([
       getAdminDashboardStats(),
       getAdminUsers(),
-      getUserInteractionSummaries().catch((): UserInteractionSummary[] => []),
+      getUserInteractionSummaries(),
     ])
       .then(([nextStats, users, interactions]) => {
         if (!active) return;
@@ -47,8 +49,8 @@ function CandidateDirectory({ user }: { user: User }) {
           }));
         setError("");
       })
-      .catch(() => {
-        if (active) setError("Candidates could not be loaded. Please try again.");
+      .catch((requestError: unknown) => {
+        if (active) setError(getRequestErrorMessage(requestError, "Candidates could not be loaded. Please try again."));
       })
       .finally(() => {
         if (active) {
@@ -108,7 +110,7 @@ function CandidateDirectory({ user }: { user: User }) {
         />
       </Box>
 
-      {loading ? <Box className="admin-loading"><CircularProgress size={26} /></Box> : visibleCandidates.length ? (
+      {loading ? <Box className="admin-loading"><Loading message="Loading candidates..." /></Box> : visibleCandidates.length ? (
         <Box className="hr-candidate-list">
           {visibleCandidates.map((candidate) => (
             <Paper key={candidate._id} className="hr-candidate-card" elevation={0}>

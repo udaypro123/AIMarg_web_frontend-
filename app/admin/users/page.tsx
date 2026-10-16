@@ -24,15 +24,17 @@ import BlockRoundedIcon from "@mui/icons-material/BlockRounded";
 import LockOpenRoundedIcon from "@mui/icons-material/LockOpenRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
+import Loading from "@/components/common/Loading";
 import AdminAccess from "../_components/AdminAccess";
 import AdminUserPreview from "./_components/AdminUserPreview";
+import { getRequestErrorMessage } from "@/services/api";
 import {
   getAdminDashboardStats,
   getAdminUsers,
   getUserInteractionSummaries,
   setAdminUserBlocked,
 } from "@/services/admin.service";
-import type { User, UserInteractionSummary } from "@/types/api";
+import type { User } from "@/types/api";
 
 type UserStatus = "all" | "active" | "blocked";
 type ManagedUser = User & { likeCount: number; commentCount: number; likedByMe: boolean };
@@ -56,7 +58,7 @@ function AdminUsers({ admin }: { admin: User }) {
     Promise.all([
       getAdminDashboardStats(),
       getAdminUsers(),
-      getUserInteractionSummaries().catch((): UserInteractionSummary[] => []),
+      getUserInteractionSummaries(),
     ])
       .then(([stats, accountList, summary]) => {
         if (!active) return;
@@ -73,8 +75,8 @@ function AdminUsers({ admin }: { admin: User }) {
         }));
         setError("");
       })
-      .catch(() => {
-        if (active) setError("User accounts could not be loaded. Please try again.");
+      .catch((requestError: unknown) => {
+        if (active) setError(getRequestErrorMessage(requestError, "User accounts could not be loaded. Please try again."));
       })
       .finally(() => {
         if (active) {
@@ -114,8 +116,8 @@ function AdminUsers({ admin }: { admin: User }) {
         ? { ...account, isBlocked: updated.isBlocked }
         : account));
       setTargetUser(null);
-    } catch {
-      setError("Account access could not be updated. Please try again.");
+    } catch (requestError: unknown) {
+      setError(getRequestErrorMessage(requestError, "Account access could not be updated. Please try again."));
     } finally {
       setUpdatingId(null);
     }
@@ -163,7 +165,7 @@ function AdminUsers({ admin }: { admin: User }) {
         </Box>
       </Box>
 
-      {loading ? <Box className="admin-loading"><CircularProgress size={26} /></Box> : visibleUsers.length === 0 ? (
+      {loading ? <Box className="admin-loading"><Loading message="Loading user accounts..." /></Box> : visibleUsers.length === 0 ? (
         <Paper className="admin-empty-panel" elevation={0}>
           <Typography variant="h3">{users.length ? "No matching accounts" : "No users yet"}</Typography>
           <Typography variant="body2">{users.length ? "Try another name, role, or status filter." : "New registrations will appear here."}</Typography>

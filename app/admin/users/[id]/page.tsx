@@ -10,6 +10,7 @@ import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
 import LaunchRoundedIcon from "@mui/icons-material/LaunchRounded";
 import ReplyRoundedIcon from "@mui/icons-material/ReplyRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
+import Loading from "@/components/common/Loading";
 import AdminAccess from "../../_components/AdminAccess";
 import {
   addAdminUserComment,
@@ -18,6 +19,7 @@ import {
   getUserInteractionSummaries,
   toggleAdminUserLike,
 } from "@/services/admin.service";
+import { getRequestErrorMessage } from "@/services/api";
 import type { User, UserComment } from "@/types/api";
 
 function safeExternalUrl(value?: string) {
@@ -88,11 +90,14 @@ function AdminUserDetail({ userId }: { userId: string }) {
           setCommentCount(commentsResult.value.length);
         }
         if (summaryResult.status === "rejected" || commentsResult.status === "rejected") {
-          setInteractionError("Some community activity could not be loaded. Please refresh the page to try again.");
+          const requestError = summaryResult.status === "rejected"
+            ? summaryResult.reason
+            : commentsResult.status === "rejected" ? commentsResult.reason : undefined;
+          setInteractionError(getRequestErrorMessage(requestError, "Some community activity could not be loaded. Please refresh the page to try again."));
         }
       })
-      .catch(() => {
-        if (active) setError("This user profile could not be loaded.");
+      .catch((requestError: unknown) => {
+        if (active) setError(getRequestErrorMessage(requestError, "This user profile could not be loaded."));
       })
       .finally(() => {
         if (active) {
@@ -114,8 +119,8 @@ function AdminUserDetail({ userId }: { userId: string }) {
       const result = await toggleAdminUserLike(profile._id);
       setLikedByMe(result.liked);
       setLikeCount((current) => Math.max(0, current + (result.liked ? 1 : -1)));
-    } catch {
-      setInteractionError("The like could not be updated. Please try again.");
+    } catch (requestError: unknown) {
+      setInteractionError(getRequestErrorMessage(requestError, "The like could not be updated. Please try again."));
     } finally {
       setUpdatingLike(false);
     }
@@ -133,14 +138,14 @@ function AdminUserDetail({ userId }: { userId: string }) {
       setCommentCount((current) => current + 1);
       setCommentText("");
       setReplyTarget(null);
-    } catch {
-      setInteractionError("Your comment or reply could not be posted. Please try again.");
+    } catch (requestError: unknown) {
+      setInteractionError(getRequestErrorMessage(requestError, "Your comment or reply could not be posted. Please try again."));
     } finally {
       setSendingComment(false);
     }
   };
 
-  if (loading || loadedUserId !== userId) return <Box className="admin-loading"><CircularProgress size={26} /></Box>;
+  if (loading || loadedUserId !== userId) return <Box className="admin-loading"><Loading message="Loading user profile..." /></Box>;
   if (error || !profile) return <Alert severity="error">{error || "User not found."}</Alert>;
 
   const linkedinUrl = safeExternalUrl(profile.linkedinUrl);

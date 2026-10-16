@@ -376,7 +376,7 @@ export default function Navbar({ right }: NavbarProps) {
 
                   <ArrowForwardRoundedIcon
                     sx={{
-                      fontSize: 19,
+                      fontSize: 17.1,
                       color: "text.secondary",
                     }}
                   />
@@ -403,4 +403,3 @@ export default function Navbar({ right }: NavbarProps) {
     </>
   );
 }
-

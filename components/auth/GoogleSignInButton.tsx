@@ -85,12 +85,12 @@ export function GoogleSignInButton({
           borderRadius: "999px",
           backgroundColor: "#fff",
           color: "#1f1f1f",
-          fontSize: 15,
+          fontSize: 13.5,
           fontWeight: 600,
           cursor: "pointer",
         }}
       >
-        <span aria-hidden="true" style={{ color: "#4285F4", marginRight: 10, fontSize: 18 }}>G</span>
+        <span aria-hidden="true" style={{ color: "#4285F4", marginRight: 10, fontSize: 16.2 }}>G</span>
         {label}
       </Box>
     );

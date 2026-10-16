@@ -8,7 +8,9 @@ import PeopleAltRoundedIcon from "@mui/icons-material/PeopleAltRounded";
 import PersonAddAlt1RoundedIcon from "@mui/icons-material/PersonAddAlt1Rounded";
 import PersonOutlineRoundedIcon from "@mui/icons-material/PersonOutlineRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
+import Loading from "@/components/common/Loading";
 import HRAccess from "./_components/HRAccess";
+import { getRequestErrorMessage } from "@/services/api";
 import { getAdminDashboardStats, getRecentAdminActivity } from "@/services/admin.service";
 import type { AdminStats, RecentActivity, User } from "@/types/api";
 
@@ -29,8 +31,8 @@ function HRDashboard({ user }: { user: User }) {
         setActivity(nextActivity);
         setError("");
       })
-      .catch(() => {
-        if (active) setError("Candidate data could not be loaded.");
+      .catch((requestError: unknown) => {
+        if (active) setError(getRequestErrorMessage(requestError, "Candidate data could not be loaded."));
       })
       .finally(() => {
         if (active) {
@@ -64,7 +66,7 @@ function HRDashboard({ user }: { user: User }) {
 
       {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
 
-      {loading ? <Box className="admin-loading"><CircularProgress size={26} /></Box> : <>
+      {loading ? <Box className="admin-loading"><Loading message="Loading candidate insights..." /></Box> : <>
         <Box className="hr-dashboard-grid">
           <Box className="hr-dashboard-main">
             <Box className="hr-dashboard-stats">

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
 import { Alert, Box, Button, Typography, Stack, TextField, IconButton, InputAdornment, MenuItem } from "@mui/material";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import VisibilityIcon from "@mui/icons-material/Visibility";
@@ -12,15 +11,9 @@ import PersonIcon from "@mui/icons-material/Person";
 import Link from "next/link";
 import { PrimaryButton } from "@/components/common/Buttons";
 import { register, sendSignupOtp, verifySignupOtp } from "@/services/auth.service";
+import { getRequestErrorMessage } from "@/services/api";
 import { useToast } from "@/components/common/Toast";
 import AuthScreen from "@/components/layout/AuthScreen";
-
-function getAuthErrorMessage(error: unknown, fallback: string) {
-  if (axios.isAxiosError<{ message?: unknown }>(error) && typeof error.response?.data?.message === "string") {
-    return error.response.data.message;
-  }
-  return error instanceof Error ? error.message : fallback;
-}
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -59,7 +52,7 @@ export default function RegisterPage() {
       setOtpSent(true);
       toast({ title: "Verification code sent to your email.", severity: "success" });
     } catch (err: unknown) {
-      setError(getAuthErrorMessage(err, "Could not send verification code."));
+      setError(getRequestErrorMessage(err, "Could not send verification code."));
     } finally {
       setSendingOtp(false);
     }
@@ -80,7 +73,7 @@ export default function RegisterPage() {
       setSignupToken(token);
       toast({ title: "Email verified. Complete your account details.", severity: "success" });
     } catch (err: unknown) {
-      setError(getAuthErrorMessage(err, "Could not verify the code."));
+      setError(getRequestErrorMessage(err, "Could not verify the code."));
     } finally {
       setVerifyingOtp(false);
     }
@@ -103,7 +96,7 @@ export default function RegisterPage() {
         setError(res.message || "Registration failed");
       }
     } catch (err: unknown) {
-      setError(getAuthErrorMessage(err, "Registration failed"));
+      setError(getRequestErrorMessage(err, "Registration failed"));
     } finally {
       setLoading(false);
     }

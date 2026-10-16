@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Alert, Box, Button, LinearProgress, Paper, Stack, Typography } from "@mui/material";
+import { Alert, Avatar, Box, Button, LinearProgress, Paper, Stack, Typography } from "@mui/material";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
+import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
+import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineRounded";
 import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
 import SchoolRoundedIcon from "@mui/icons-material/SchoolRounded";
@@ -11,28 +13,61 @@ import RouteRoundedIcon from "@mui/icons-material/RouteRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import { getCareerJourney } from "@/services/career.service";
-import { getMyPosts } from "@/services/community.service";
+import { getRequestErrorMessage } from "@/services/api";
+import { getCommunityMembers, getMyPosts } from "@/services/community.service";
+import { getUserInteractionSummaries } from "@/services/admin.service";
 import { getMyImpactReports } from "@/services/impact.service";
 import { getProfile } from "@/services/user.service";
-import type { CareerJourney, ImpactReport, Post, User } from "@/types/api";
+import type { CareerJourney, ImpactReport, Post, User, UserInteractionSummary } from "@/types/api";
+
+type DashboardCommunityMember = User & Pick<UserInteractionSummary, "likeCount" | "commentCount">;
 
 export default function HomePage() {
   const [profile, setProfile] = useState<User | null>(null);
   const [latestReport, setLatestReport] = useState<ImpactReport | null>(null);
   const [journey, setJourney] = useState<CareerJourney | null>(null);
   const [myThought, setMyThought] = useState<Post | null>(null);
+  const [members, setMembers] = useState<DashboardCommunityMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     let active = true;
-    Promise.allSettled([getProfile(), getMyImpactReports(), getCareerJourney(), getMyPosts()]).then((results) => {
+    Promise.allSettled([
+      getProfile(),
+      getMyImpactReports(),
+      getCareerJourney(),
+      getMyPosts(),
+      getCommunityMembers(),
+      getUserInteractionSummaries(),
+    ]).then((results) => {
       if (!active) return;
       if (results[0].status === "fulfilled") setProfile(results[0].value);
+      else setError(getRequestErrorMessage(results[0].reason, "Your profile could not be loaded."));
       if (results[1].status === "fulfilled") setLatestReport(results[1].value[0] || null);
+      else setError((current) => current || getRequestErrorMessage(results[1].status === "rejected" ? results[1].reason : undefined, "Your impact reports could not be loaded."));
       if (results[2].status === "fulfilled") setJourney(results[2].value);
+      else setError((current) => current || getRequestErrorMessage(results[2].status === "rejected" ? results[2].reason : undefined, "Your career journey could not be loaded."));
       if (results[3].status === "fulfilled") setMyThought(results[3].value[0] || null);
-      if (results.every((result) => result.status === "rejected")) setError("We could not refresh your workspace data.");
+      else setError((current) => current || getRequestErrorMessage(results[3].status === "rejected" ? results[3].reason : undefined, "Your community posts could not be loaded."));
+      if (results[4].status === "fulfilled") {
+        const interactions = results[5].status === "fulfilled" ? results[5].value : [];
+        const byUserId = new Map(interactions.map((interaction) => [interaction.targetUserId, interaction]));
+        setMembers(results[4].value.map((member) => {
+          const interaction = byUserId.get(member._id || "");
+          return {
+            ...member,
+            likeCount: interaction?.likeCount ?? 0,
+            commentCount: interaction?.commentCount ?? 0,
+          };
+        }));
+        if (results[5].status === "rejected") setError((current) => current || getRequestErrorMessage(results[5].status === "rejected" ? results[5].reason : undefined, "Community interactions could not be loaded."));
+      } else {
+        setError((current) => current || getRequestErrorMessage(results[4].status === "rejected" ? results[4].reason : undefined, "Community members could not be loaded."));
+      }
+      if (results.every((result) => result.status === "rejected")) {
+        setError((current) => current || "We could not refresh your workspace data.");
+      }
       setLoading(false);
     });
     return () => {
@@ -48,6 +83,14 @@ export default function HomePage() {
   const profileProgress = Math.round((profileFields.filter(Boolean).length / profileFields.length) * 100);
   const profileComplete = Boolean(profile?.currentRole && profile.company && profile.experience && profile.skills?.length);
   const resumeName = profile?.resume?.split("/").pop();
+  const currentUserId = String(profile?._id || profile?.id || "");
+  const communityMembers = members
+    .filter((member) => {
+      const memberId = String(member._id || member.id || "");
+      return (!memberId || !currentUserId || memberId !== currentUserId)
+        && (member.roles || []).some((role) => role.toLocaleUpperCase() === "USER");
+    })
+    .slice(0, 3);
 
   return (
     <Stack spacing={3} className="user-dashboard">
@@ -64,7 +107,7 @@ export default function HomePage() {
 
       {error && <Alert severity="warning" onClose={() => setError("")}>{error}</Alert>}
 
-      <Box className="dashboard-hero">
+      {/* <Box className="dashboard-hero">
         <Box className="dashboard-hero-copy">
           <Typography className="dashboard-hero-kicker"><span /> CAREER MOMENTUM</Typography>
           <Typography variant="h2">Make your next move a considered one.</Typography>
@@ -78,7 +121,81 @@ export default function HomePage() {
           <span className="hero-path-step is-next"><strong>02</strong><span>Build skills</span><i /></span>
           <span className="hero-path-step"><strong>03</strong><span>Choose what is next</span></span>
         </Box>
-      </Box>
+      </Box> */}
+
+      <Stack spacing={2.5} className="dashboard-community-section">
+        <Box className="section-heading-row dashboard-community-heading">
+          <Box>
+            <Typography className="impact-overview-label">COMMUNITY</Typography>
+
+          </Box>
+          <Button component={Link} href="/community" variant="outlined" endIcon={<ArrowForwardRoundedIcon />}>
+            Explore community
+          </Button>
+        </Box>
+
+        <Box className="dashboard-community-layout">
+          <Box className="dashboard-community-members">
+            {loading ? (
+              <Paper className="empty-state community-member-empty" elevation={0}>
+                <Typography variant="body2">Loading community members...</Typography>
+              </Paper>
+            ) : communityMembers.length ? (
+              <Box className="community-member-grid">
+                {communityMembers.map((member) => (
+                  <Paper
+                    key={member._id || member.id || member.email}
+                    component={Link}
+                    href="/community"
+                    className="community-member-card dashboard-community-card"
+                    elevation={0}
+                    aria-label={`View ${member.name}'s profile in the community`}
+                  >
+                    <Box className="community-member-main">
+                      <Avatar className="community-member-avatar">{member.name?.charAt(0).toUpperCase() || "U"}</Avatar>
+                      <Box className="community-member-identity">
+                        <Typography className="community-member-name">{member.name}</Typography>
+                        <Typography className="community-member-role">{[member.currentRole, member.company].filter(Boolean).join(" at ") || member.roles?.[0] || "Community member"}</Typography>
+                      </Box>
+                      <ArrowForwardRoundedIcon className="community-member-arrow" />
+                    </Box>
+                    {member.skills?.length ? (
+                      <Box className="community-member-skills">
+                        {member.skills.slice(0, 4).map((skill) => <span key={skill}>{skill}</span>)}
+                        {member.skills.length > 4 && <small>+{member.skills.length - 4}</small>}
+                      </Box>
+                    ) : null}
+                    {member.jobDescription && <Typography className="community-member-description">{member.jobDescription}</Typography>}
+                    <Box className="community-member-footer">
+                      <span><FavoriteRoundedIcon /> {member.likeCount} likes</span>
+                      <span><ChatBubbleOutlineRoundedIcon /> {member.commentCount} comments</span>
+                    </Box>
+                  </Paper>
+                ))}
+              </Box>
+            ) : (
+              <Paper className="empty-state community-member-empty" elevation={0}>
+                <Typography variant="h3">No community members to show</Typography>
+                <Typography variant="body2">Discoverable member profiles will appear here.</Typography>
+              </Paper>
+            )}
+          </Box>
+
+          <Box className="dashboard-profile-card">
+            <Box>
+              <Typography className="impact-overview-label">PROFILE COMPLETENESS</Typography>
+              <Typography className="profile-progress-number">{profileProgress}%</Typography>
+              <Typography className="section-caption">A few details can make your career picture clearer.</Typography>
+            </Box>
+            <div className="profile-progress-track"><span style={{ width: `${profileProgress}%` }} /></div>
+            <Box className="dashboard-resume-status">
+              <DescriptionOutlinedIcon />
+              <span>{resumeName ? `Resume attached: ${resumeName}` : "No resume attached"}</span>
+            </Box>
+            <Button component={Link} href="/profile" variant="outlined" endIcon={<ArrowForwardRoundedIcon />}>Complete your profile</Button>
+          </Box>
+        </Box>
+      </Stack>
 
       <Box className="dashboard-metrics">
         <Paper className="dashboard-metric" elevation={0}>
@@ -104,8 +221,10 @@ export default function HomePage() {
         </Paper>
       </Box>
 
+
+
       <Box className="dashboard-lower-grid">
-        <Box className="dashboard-next-step">
+        {/* <Box className="dashboard-next-step">
           <Box className="section-heading-row">
             <Box>
               <Typography className="impact-overview-label">KEEP MOVING</Typography>
@@ -119,24 +238,12 @@ export default function HomePage() {
           </Typography>
           {milestones.length > 0 && <LinearProgress variant="determinate" value={Math.round((completedMilestones / milestones.length) * 100)} />}
           <Button component={Link} href="/career" endIcon={<ArrowForwardRoundedIcon />}>Open career path</Button>
-        </Box>
+        </Box> */}
 
-        <Box className="dashboard-profile-card">
-          <Box>
-            <Typography className="impact-overview-label">PROFILE COMPLETENESS</Typography>
-            <Typography className="profile-progress-number">{profileProgress}%</Typography>
-            <Typography className="section-caption">A few details can make your career picture clearer.</Typography>
-          </Box>
-          <div className="profile-progress-track"><span style={{ width: `${profileProgress}%` }} /></div>
-          <Box className="dashboard-resume-status">
-            <DescriptionOutlinedIcon />
-            <span>{resumeName ? `Resume attached: ${resumeName}` : "No resume attached"}</span>
-          </Box>
-          <Button component={Link} href="/profile" variant="outlined" endIcon={<ArrowForwardRoundedIcon />}>Complete your profile</Button>
-        </Box>
+
       </Box>
 
-      <Paper className="dashboard-thought-panel" elevation={0}>
+      {/* <Paper className="dashboard-thought-panel" elevation={0}>
         <Box className="dashboard-thought-copy">
           <Typography className="impact-overview-label">YOUR COMMUNITY VOICE</Typography>
           <Typography variant="h2" className="section-title">My AI impact thought</Typography>
@@ -152,7 +259,7 @@ export default function HomePage() {
         <Button component={Link} href="/community" variant={myThought ? "outlined" : "contained"} endIcon={<ArrowForwardRoundedIcon />}>
           {myThought ? "View or edit thought" : "Share your thought"}
         </Button>
-      </Paper>
+      </Paper> */}
 
       <Box className="dashboard-quick-links">
         <Typography className="impact-overview-label">YOUR WORKSPACE</Typography>

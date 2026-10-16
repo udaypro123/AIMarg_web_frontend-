@@ -5,6 +5,8 @@ import { Alert, Box, Button, Chip, CircularProgress, Paper, Stack, TextField, Ty
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import AutoAwesomeRoundedIcon from "@mui/icons-material/AutoAwesomeRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import Loading from "@/components/common/Loading";
+import { getRequestErrorMessage } from "@/services/api";
 import { getSkills } from "@/services/skill.service";
 import { getProfile, updateProfile } from "@/services/user.service";
 import type { Skill } from "@/types/api";
@@ -28,8 +30,8 @@ export default function SkillsPage() {
         setSkills(profile.skills || []);
         setInitialSkills(profile.skills || []);
       })
-      .catch(() => {
-        if (active) setError("Your skills could not be loaded. Please try again.");
+      .catch((requestError: unknown) => {
+        if (active) setError(getRequestErrorMessage(requestError, "Your skills could not be loaded. Please try again."));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -64,8 +66,8 @@ export default function SkillsPage() {
       const saved = await updateProfile({ skills });
       setSkills(saved.skills || skills);
       setInitialSkills(saved.skills || skills);
-    } catch {
-      setError("Your skill list could not be saved. Please try again.");
+    } catch (requestError: unknown) {
+      setError(getRequestErrorMessage(requestError, "Your skill list could not be saved. Please try again."));
     } finally {
       setSaving(false);
     }
@@ -111,7 +113,7 @@ export default function SkillsPage() {
               <span className="skills-total">{skills.length.toString().padStart(2, "0")}</span>
             </Box>
             {loading ? (
-              <Box className="loading-state"><CircularProgress size={24} /></Box>
+              <Box className="loading-state"><Loading message="Loading your skills..." /></Box>
             ) : skills.length === 0 ? (
               <Box className="skills-empty">
                 <Typography>No skills added yet</Typography>
@@ -145,10 +147,11 @@ export default function SkillsPage() {
             placeholder="Search the library"
             size="small"
             fullWidth
+            className="skill-library-search"
             slotProps={{ input: { startAdornment: <SearchRoundedIcon color="action" sx={{ mr: 1 }} /> } }}
             sx={{ mt: 2, mb: 2.5 }}
           />
-          {loading ? <Box className="loading-state"><CircularProgress size={24} /></Box> : categories.length === 0 ? (
+          {loading ? <Box className="loading-state"><Loading message="Loading the skill library..." /></Box> : categories.length === 0 ? (
             <Typography className="catalog-empty" variant="body2">{catalog.length ? "No matching skills. Add it using the field on the left." : "The skill library is empty right now. Add a skill directly to your profile."}</Typography>
           ) : (
             <Stack spacing={2.5}>

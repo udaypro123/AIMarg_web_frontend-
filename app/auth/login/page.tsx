@@ -10,6 +10,7 @@ import LockIcon from "@mui/icons-material/Lock";
 import Link from "next/link";
 import { PrimaryButton } from "@/components/common/Buttons";
 import { googleLogin, login } from "@/services/auth.service";
+import { getRequestErrorMessage } from "@/services/api";
 import { useToast } from "@/components/common/Toast";
 import AuthScreen from "@/components/layout/AuthScreen";
 // import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
@@ -36,8 +37,8 @@ export default function LoginPage() {
       } else {
         setError(res.message || "Invalid credentials");
       }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Invalid credentials");
+    } catch (requestError: unknown) {
+      setError(getRequestErrorMessage(requestError, "Invalid credentials"));
     } finally {
       setLoading(false);
     }
@@ -50,8 +51,8 @@ export default function LoginPage() {
   //     const res = await googleLogin(idToken);
   //     toast({ title: "Welcome back!", severity: "success" });
   //     router.push(res.data.isNewUser ? "/onboarding" : "/");
-  //   } catch (err: unknown) {
-  //     setError(err instanceof Error ? err.message : "Google sign-in failed");
+  //   } catch (requestError: unknown) {
+  //     setError(getRequestErrorMessage(requestError, "Google sign-in failed"));
   //   } finally {
   //     setGoogleLoading(false);
   //   }

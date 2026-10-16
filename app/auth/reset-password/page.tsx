@@ -7,6 +7,7 @@ import Link from "next/link";
 import AuthScreen from "@/components/layout/AuthScreen";
 import { PrimaryButton } from "@/components/common/Buttons";
 import { resetPassword } from "@/services/auth.service";
+import { getRequestErrorMessage } from "@/services/api";
 import { useToast } from "@/components/common/Toast";
 
 export default function ResetPasswordPage() {
@@ -36,8 +37,8 @@ export default function ResetPasswordPage() {
       await resetPassword(token, password);
       toast({ title: "Password updated", severity: "success" });
       router.push("/auth/login");
-    } catch {
-      setError("This reset link is invalid or has expired. Request a new one.");
+    } catch (requestError: unknown) {
+      setError(getRequestErrorMessage(requestError, "This reset link is invalid or has expired. Request a new one."));
     } finally {
       setLoading(false);
     }

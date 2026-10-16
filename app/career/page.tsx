@@ -5,7 +5,9 @@ import Link from "next/link";
 import { Alert, Box, Button, CircularProgress, LinearProgress, Paper, Stack, Typography } from "@mui/material";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import RadioButtonUncheckedRoundedIcon from "@mui/icons-material/RadioButtonUncheckedRounded";
+import Loading from "@/components/common/Loading";
 import { CAREER_MILESTONES } from "@/constants";
+import { getRequestErrorMessage } from "@/services/api";
 import { getCareerJourney, updateCareerJourney } from "@/services/career.service";
 import type { CareerJourney } from "@/types/api";
 
@@ -21,8 +23,8 @@ export default function CareerPage() {
       .then((data) => {
         if (active) setJourney(data);
       })
-      .catch(() => {
-        if (active) setError("Your career journey could not be loaded. Please try again.");
+      .catch((requestError: unknown) => {
+        if (active) setError(getRequestErrorMessage(requestError, "Your career journey could not be loaded. Please try again."));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -48,8 +50,8 @@ export default function CareerPage() {
     });
     try {
       setJourney(await updateCareerJourney(nextMilestones));
-    } catch {
-      setError("That milestone could not be updated. Try again in a moment.");
+    } catch (requestError: unknown) {
+      setError(getRequestErrorMessage(requestError, "That milestone could not be updated. Try again in a moment."));
     } finally {
       setSavingKey(null);
     }
@@ -99,7 +101,7 @@ export default function CareerPage() {
       </Box>
 
       {loading ? (
-        <Box className="loading-state"><CircularProgress size={25} /></Box>
+        <Box className="loading-state"><Loading message="Loading your career journey..." /></Box>
       ) : (
         <Stack className="milestone-list user-milestone-list" spacing={0}>
           {milestones.map((milestone, index) => {

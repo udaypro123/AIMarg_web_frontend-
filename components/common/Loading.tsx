@@ -1,45 +1,32 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
-import { Box, Stack, Typography, CircularProgress } from "@mui/material";
+import type { CSSProperties } from "react";
+import { Box, Typography } from "@mui/material";
 
 export default function Loading({
   fullScreen = false,
-  message = "Loading...",
-  size = 48,
+  message = "Getting things ready",
+  size = 28,
 }: {
   fullScreen?: boolean;
   message?: string;
   size?: number;
 }) {
-  const content = (
-    <Stack spacing={2} sx={{ py: 6, alignItems: "center", justifyContent: "center" }}>
-      <CircularProgress size={size} />
-      {message && (
-        <Typography variant="body2" color="text.secondary">
-          {message}
-        </Typography>
-      )}
-    </Stack>
-  );
-
-  if (fullScreen) {
-    return (
-      <Box
-        sx={{
-          position: "fixed",
-          inset: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          bgcolor: "background.default",
-          zIndex: 9999,
-        }}
-      >
-        {content}
+  return (
+    <Box
+      className={`brand-loader${fullScreen ? " is-fullscreen" : ""}`}
+      role="status"
+      aria-label={message || "Loading"}
+      style={{ "--loader-size": `${size}px` } as CSSProperties}
+    >
+      <Box className="brand-loader-mark" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+        <span />
       </Box>
-    );
-  }
-
-  return content;
+      {message && <Typography className="brand-loader-message">{message}</Typography>}
+      <span className="brand-loader-sr-only">Loading</span>
+    </Box>
+  );
 }

@@ -7,7 +7,9 @@ import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import PeopleAltRoundedIcon from "@mui/icons-material/PeopleAltRounded";
 import PersonAddAlt1RoundedIcon from "@mui/icons-material/PersonAddAlt1Rounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
+import Loading from "@/components/common/Loading";
 import AdminAccess from "./_components/AdminAccess";
+import { getRequestErrorMessage } from "@/services/api";
 import { getAdminDashboardStats, getRecentAdminActivity } from "@/services/admin.service";
 import type { AdminStats, RecentActivity, User } from "@/types/api";
 
@@ -28,8 +30,8 @@ function AdminDashboard({ user }: { user: User }) {
         setActivity(nextActivity);
         setError("");
       })
-      .catch(() => {
-        if (active) setError("Dashboard data could not be loaded.");
+      .catch((requestError: unknown) => {
+        if (active) setError(getRequestErrorMessage(requestError, "Dashboard data could not be loaded."));
       })
       .finally(() => {
         if (active) {
@@ -68,7 +70,7 @@ function AdminDashboard({ user }: { user: User }) {
       {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
 
       {loading ? (
-        <Box className="admin-loading"><CircularProgress size={26} /></Box>
+        <Box className="admin-loading"><Loading message="Loading dashboard data..." /></Box>
       ) : (
         <>
           <Box className="admin-stat-grid">

@@ -29,6 +29,8 @@ import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
+import Loading from "@/components/common/Loading";
+import { getRequestErrorMessage } from "@/services/api";
 import { createComment, createPost, deletePost, getComments, getCommunityMembers, getPosts, togglePostLike, updatePost } from "@/services/community.service";
 import { getProfile } from "@/services/user.service";
 import { getUserInteractionSummaries } from "@/services/admin.service";
@@ -70,9 +72,9 @@ export default function CommunityPage() {
     Promise.allSettled([getPosts(), getProfile(), getCommunityMembers(), getUserInteractionSummaries()]).then((results) => {
       if (!active) return;
       if (results[0].status === "fulfilled") setPosts(results[0].value);
-      else setError("Community posts could not be loaded.");
+      else setError(getRequestErrorMessage(results[0].reason, "Community posts could not be loaded."));
       if (results[1].status === "fulfilled") setProfile(results[1].value);
-      else setError((current) => current || "Your profile could not be loaded.");
+      else setError((current) => current || getRequestErrorMessage(results[1].status === "rejected" ? results[1].reason : undefined, "Your profile could not be loaded."));
       if (results[2].status === "fulfilled") {
         const interactions = results[3].status === "fulfilled" ? results[3].value : [];
         const byUserId = new Map(interactions.map((interaction: UserInteractionSummary) => [interaction.targetUserId, interaction]));
@@ -85,9 +87,9 @@ export default function CommunityPage() {
             likedByMe: interaction?.likedByMe ?? false,
           };
         }));
-        if (results[3].status === "rejected") setError((current) => current || "Community interactions could not be loaded.");
+        if (results[3].status === "rejected") setError((current) => current || getRequestErrorMessage(results[3].status === "rejected" ? results[3].reason : undefined, "Community interactions could not be loaded."));
       } else {
-        setError((current) => current || "Community members could not be loaded.");
+        setError((current) => current || getRequestErrorMessage(results[2].status === "rejected" ? results[2].reason : undefined, "Community members could not be loaded."));
       }
       setLoading(false);
     });
@@ -174,8 +176,8 @@ export default function CommunityPage() {
         setPosts((current) => [created, ...current]);
       }
       setDialogOpen(false);
-    } catch {
-      setError("Your post could not be saved. Please try again.");
+    } catch (requestError: unknown) {
+      setError(getRequestErrorMessage(requestError, "Your post could not be saved. Please try again."));
     } finally {
       setSavingPost(false);
     }
@@ -193,8 +195,8 @@ export default function CommunityPage() {
           : item.likes.filter((id) => id !== profile._id);
         return { ...item, likes };
       }));
-    } catch {
-      setError("Your reaction could not be saved.");
+    } catch (requestError: unknown) {
+      setError(getRequestErrorMessage(requestError, "Your reaction could not be saved."));
     } finally {
       setLikingPost(null);
     }
@@ -206,8 +208,8 @@ export default function CommunityPage() {
     setLoadingComments(true);
     try {
       setComments(await getComments(post._id));
-    } catch {
-      setError("Comments could not be loaded.");
+    } catch (requestError: unknown) {
+      setError(getRequestErrorMessage(requestError, "Comments could not be loaded."));
     } finally {
       setLoadingComments(false);
     }
@@ -223,8 +225,8 @@ export default function CommunityPage() {
       setCommentText("");
       setPosts((current) => current.map((post) => post._id === selectedPost._id ? { ...post, commentCount: post.commentCount + 1 } : post));
       setSelectedPost((current) => current ? { ...current, commentCount: current.commentCount + 1 } : current);
-    } catch {
-      setError("Your comment could not be posted.");
+    } catch (requestError: unknown) {
+      setError(getRequestErrorMessage(requestError, "Your comment could not be posted."));
     } finally {
       setSavingComment(false);
     }
@@ -235,8 +237,8 @@ export default function CommunityPage() {
     try {
       await deletePost(post._id);
       setPosts((current) => current.filter((item) => item._id !== post._id));
-    } catch {
-      setError("This post could not be deleted.");
+    } catch (requestError: unknown) {
+      setError(getRequestErrorMessage(requestError, "This post could not be deleted."));
     }
   };
 
@@ -295,7 +297,7 @@ export default function CommunityPage() {
               slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchRoundedIcon fontSize="small" /></InputAdornment> } }}
             />
           </Paper>
-          {loading ? <Box className="loading-state"><CircularProgress size={25} /></Box> : visibleMembers.length ? (
+          {loading ? <Box className="loading-state"><Loading message="Finding community members..." /></Box> : visibleMembers.length ? (
             <Box className="community-member-grid">
               {visibleMembers.map((member) => (
                 <Paper key={member._id} className="community-member-card" elevation={0}>
@@ -338,7 +340,7 @@ export default function CommunityPage() {
             <IconButton aria-label="Create post" onClick={openCreateDialog}><AddRoundedIcon /></IconButton>
           </Paper>
 
-          {loading ? <Box className="loading-state"><CircularProgress size={25} /></Box> : visiblePosts.length === 0 ? (
+          {loading ? <Box className="loading-state"><Loading message="Loading community updates..." /></Box> : visiblePosts.length === 0 ? (
             <Paper className="empty-state" elevation={0}>
               <Typography variant="h3">{query ? "No matching updates" : "Be the first to share"}</Typography>
               <Typography variant="body2" color="text.secondary">{query ? "Try a different search." : "Share a lesson, a question, or a small win from your career journey."}</Typography>
@@ -396,7 +398,7 @@ export default function CommunityPage() {
       </Box>
       )}
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
+      <Dialog className="community-dialog" open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
         <Box component="form" onSubmit={submitPost}>
           <DialogTitle className="dialog-heading">
             <Typography className="page-eyebrow">COMMUNITY NOTE</Typography>
@@ -419,14 +421,14 @@ export default function CommunityPage() {
         </Box>
       </Dialog>
 
-      <Dialog open={Boolean(selectedPost)} onClose={() => setSelectedPost(null)} fullWidth maxWidth="sm">
+      <Dialog className="community-dialog" open={Boolean(selectedPost)} onClose={() => setSelectedPost(null)} fullWidth maxWidth="sm">
         <DialogTitle className="dialog-heading">
           <Typography className="page-eyebrow">DISCUSSION</Typography>
           <Typography variant="h2" className="section-title">{selectedPost?.title || "Comments"}</Typography>
         </DialogTitle>
         <DialogContent className="comment-dialog-content">
           {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
-          {loadingComments ? <Box className="loading-state"><CircularProgress size={24} /></Box> : comments.length === 0 ? (
+          {loadingComments ? <Box className="loading-state"><Loading message="Loading the conversation..." /></Box> : comments.length === 0 ? (
             <Typography className="comments-empty">No comments yet. Start the conversation.</Typography>
           ) : comments.map((comment) => (
             <Box className="comment-row" key={comment._id}>

@@ -8,6 +8,7 @@ import Link from "next/link";
 import AuthScreen from "@/components/layout/AuthScreen";
 import { PrimaryButton } from "@/components/common/Buttons";
 import { forgotPassword } from "@/services/auth.service";
+import { getRequestErrorMessage } from "@/services/api";
 import { useToast } from "@/components/common/Toast";
 
 export default function ForgotPasswordPage() {
@@ -25,9 +26,10 @@ export default function ForgotPasswordPage() {
       await forgotPassword(email);
       setSent(true);
       toast({ title: "Reset link sent", message: "Please check your email", severity: "success" });
-    } catch {
-      setError("We could not send the reset email. Check the address and try again.");
-      toast({ title: "Error", message: "Could not send reset link", severity: "error" });
+    } catch (requestError: unknown) {
+      const message = getRequestErrorMessage(requestError, "We could not send the reset email. Check the address and try again.");
+      setError(message);
+      toast({ title: "Error", message, severity: "error" });
     } finally {
       setLoading(false);
     }

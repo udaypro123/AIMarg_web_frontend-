@@ -20,7 +20,9 @@ import {
 } from "@mui/material";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import InsightsRoundedIcon from "@mui/icons-material/InsightsRounded";
+import Loading from "@/components/common/Loading";
 import { AFFECTED_AREAS, EMPLOYMENT_STATUS, IMPACT_STATUS } from "@/constants";
+import { getRequestErrorMessage } from "@/services/api";
 import { createImpactReport, getMyImpactReports, type NewImpactReport } from "@/services/impact.service";
 import type { ImpactReport } from "@/types/api";
 
@@ -46,8 +48,8 @@ export default function ImpactPage() {
         setReports(myReports);
         setLoadError("");
       })
-      .catch(() => {
-        if (active) setLoadError("We could not load your impact reports. Please try again.");
+      .catch((requestError: unknown) => {
+        if (active) setLoadError(getRequestErrorMessage(requestError, "We could not load your impact reports. Please try again."));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -79,8 +81,8 @@ export default function ImpactPage() {
       setDialogOpen(false);
       setImpactAreas([]);
       setDescription("");
-    } catch {
-      setError("Your assessment could not be saved. Please try again.");
+    } catch (requestError: unknown) {
+      setError(getRequestErrorMessage(requestError, "Your assessment could not be saved. Please try again."));
     } finally {
       setSaving(false);
     }
@@ -148,7 +150,7 @@ export default function ImpactPage() {
           {loadError}
         </Alert>
       ) : loading ? (
-        <Box className="loading-state"><CircularProgress size={25} /></Box>
+        <Box className="loading-state"><Loading message="Loading your impact reports..." /></Box>
       ) : reports.length === 0 ? (
         <Paper className="empty-state">
           <Typography variant="h3">Your first check-in starts here</Typography>

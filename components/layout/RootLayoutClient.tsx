@@ -5,12 +5,12 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Providers } from "@/providers/ThemeProvider";
 import GlobalApiLoader from "@/components/common/GlobalApiLoader";
+import Loading from "@/components/common/Loading";
 import {
   Avatar,
   Badge,
   Box,
   Button,
-  CircularProgress,
   Divider,
   IconButton,
   Menu,
@@ -27,6 +27,7 @@ import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import PersonRoundedIcon from "@mui/icons-material/PersonRounded";
 import NotificationsNoneRoundedIcon from "@mui/icons-material/NotificationsNoneRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
+import { getRequestErrorMessage } from "@/services/api";
 import { getMe, logout } from "@/services/auth.service";
 import { getNotifications, markNotificationRead } from "@/services/notification.service";
 import { addAdminUserComment } from "@/services/admin.service";
@@ -38,6 +39,7 @@ const primaryNav = [
   { label: "Community", href: "/community", icon: <GroupsRoundedIcon /> },
   { label: "AI impact", href: "/impact", icon: <InsightsRoundedIcon /> },
   { label: "Skills", href: "/skills", icon: <AutoAwesomeRoundedIcon /> },
+  { label: "Profile", href: "/profile", icon: <PersonRoundedIcon /> },
 ];
 
 const adminNav = [
@@ -69,14 +71,14 @@ export default function RootLayoutClient({ children }: { children: React.ReactNo
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [notificationAnchor, setNotificationAnchor] = useState<HTMLElement | null>(null);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
-  const [notificationError, setNotificationError] = useState(false);
+  const [notificationError, setNotificationError] = useState("");
   const [replyingNotificationId, setReplyingNotificationId] = useState<string | null>(null);
   const [notificationReply, setNotificationReply] = useState("");
   const isAuthRoute = pathname.startsWith("/auth/") || pathname === "/onboarding" || pathname === "/how-it-works";
   const isAdmin = Boolean(user?.roles?.some((role) => role === "ADMIN" || role === "SUPER_ADMIN"));
   const isHR = Boolean(user?.roles?.includes("HR"));
   const navigationItems = isAdmin ? adminNav : isHR ? hrNav : primaryNav;
-  const mobileNavigationItems = isAdmin || isHR ? navigationItems : [...primaryNav, { label: "Profile", href: "/profile", icon: <PersonRoundedIcon /> }];
+  const mobileNavigationItems = navigationItems;
   const activeNavigationHref = [...navigationItems]
     .filter((item) => item.href === "/"
       ? pathname === "/"
@@ -106,11 +108,11 @@ export default function RootLayoutClient({ children }: { children: React.ReactNo
 
   const refreshNotifications = useCallback(async () => {
     setNotificationsLoading(true);
-    setNotificationError(false);
+    setNotificationError("");
     try {
       setNotifications(await getNotifications());
-    } catch {
-      setNotificationError(true);
+    } catch (requestError: unknown) {
+      setNotificationError(getRequestErrorMessage(requestError, "Could not load notifications."));
     } finally {
       setNotificationsLoading(false);
     }
@@ -135,8 +137,8 @@ export default function RootLayoutClient({ children }: { children: React.ReactNo
   const handleLogout = async () => {
     try {
       await logout();
-    } catch {
-      setNotificationError(true);
+    } catch (requestError: unknown) {
+      setNotificationError(getRequestErrorMessage(requestError, "Could not log out cleanly."));
     } finally {
       setUser(null);
       router.push("/auth/login");
@@ -153,8 +155,8 @@ export default function RootLayoutClient({ children }: { children: React.ReactNo
       try {
         const updated = await markNotificationRead(notification._id);
         setNotifications((current) => current.map((item) => item._id === updated._id ? updated : item));
-      } catch {
-        setNotificationError(true);
+      } catch (requestError: unknown) {
+        setNotificationError(getRequestErrorMessage(requestError, "Could not update this notification."));
       }
     }
     if (!notification.commentId) {
@@ -181,8 +183,8 @@ export default function RootLayoutClient({ children }: { children: React.ReactNo
       setNotificationReply("");
       setReplyingNotificationId(null);
       await refreshNotifications();
-    } catch {
-      setNotificationError(true);
+    } catch (requestError: unknown) {
+      setNotificationError(getRequestErrorMessage(requestError, "Your reply could not be posted."));
     }
   };
 
@@ -194,9 +196,7 @@ export default function RootLayoutClient({ children }: { children: React.ReactNo
       {isAuthRoute ? (
         <Box className="auth-surface">{children}</Box>
       ) : !authChecked ? (
-        <Box className="workspace-auth-check" role="status" aria-label="Checking your session">
-          <CircularProgress size={28} />
-        </Box>
+        <Loading fullScreen message="Loading ..." />
       ) : (
         <Box className="workspace-frame">
           <Box component="aside" className="workspace-sidebar">
@@ -284,7 +284,7 @@ export default function RootLayoutClient({ children }: { children: React.ReactNo
               {notificationsLoading ? (
                 <MenuItem disabled>Loading notifications...</MenuItem>
               ) : notificationError ? (
-                <MenuItem disabled>Could not load notifications</MenuItem>
+                <MenuItem disabled>{notificationError}</MenuItem>
               ) : notifications.length === 0 ? (
                 <MenuItem disabled>No notifications yet</MenuItem>
               ) : notifications.slice(0, 8).map((notification) => (

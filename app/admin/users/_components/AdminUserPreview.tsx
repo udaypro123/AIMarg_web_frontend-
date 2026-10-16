@@ -27,6 +27,7 @@ import {
   getAdminUserComments,
   toggleAdminUserLike,
 } from "@/services/admin.service";
+import { getRequestErrorMessage } from "@/services/api";
 import type { User, UserComment } from "@/types/api";
 
 type PreviewUser = User & { likeCount: number; commentCount: number; likedByMe: boolean };
@@ -84,8 +85,8 @@ export default function AdminUserPreview({
       .then((result) => {
         if (active) setComments(result);
       })
-      .catch(() => {
-        if (active) setError("Comments could not be loaded.");
+      .catch((requestError: unknown) => {
+        if (active) setError(getRequestErrorMessage(requestError, "Comments could not be loaded."));
       })
       .finally(() => {
         if (active) setLoadingComments(false);
@@ -110,8 +111,8 @@ export default function AdminUserPreview({
       setLikeCount(nextLikeCount);
       setLikedByMe(result.liked);
       onInteractionChange(user._id || "", { likeCount: nextLikeCount, commentCount, likedByMe: result.liked });
-    } catch {
-      setError("The like could not be updated. Please try again.");
+    } catch (requestError: unknown) {
+      setError(getRequestErrorMessage(requestError, "The like could not be updated. Please try again."));
     } finally {
       setUpdatingLike(false);
     }
@@ -131,8 +132,8 @@ export default function AdminUserPreview({
       setReplyTarget(null);
       setCommentCount(nextCount);
       onInteractionChange(user._id || "", { likeCount, commentCount: nextCount, likedByMe });
-    } catch {
-      setError("Your comment or reply could not be posted. Please try again.");
+    } catch (requestError: unknown) {
+      setError(getRequestErrorMessage(requestError, "Your comment or reply could not be posted. Please try again."));
     } finally {
       setSendingComment(false);
     }

@@ -7,7 +7,6 @@ import {
   Box,
   Checkbox,
   Chip,
-  CircularProgress,
   FormControlLabel,
   MenuItem,
   Paper,
@@ -16,8 +15,10 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import Loading from "@/components/common/Loading";
 import { OnboardingLayout } from "@/components/onboarding/OnboardingLayout";
 import { AFFECTED_AREAS, EMPLOYMENT_STATUS, IMPACT_STATUS } from "@/constants";
+import { getRequestErrorMessage } from "@/services/api";
 import { createImpactReport } from "@/services/impact.service";
 import { getSkills } from "@/services/skill.service";
 import { getProfile, updateProfile } from "@/services/user.service";
@@ -63,7 +64,7 @@ export default function OnboardingPage() {
         if (skillsResult.status === "fulfilled") {
           setCatalog(skillsResult.value);
         } else {
-          setError("The skill library could not be loaded. You can continue and add skills later.");
+          setError(`${getRequestErrorMessage(skillsResult.reason, "The skill library could not be loaded.")} You can continue and add skills later.`);
         }
       })
       .finally(() => {
@@ -94,8 +95,8 @@ export default function OnboardingPage() {
           impactAreas,
         });
         setActiveStep(2);
-      } catch {
-        setError("Your impact check-in could not be saved. Please try again.");
+      } catch (requestError: unknown) {
+        setError(getRequestErrorMessage(requestError, "Your impact check-in could not be saved. Please try again."));
       } finally {
         setSaving(false);
       }
@@ -108,8 +109,8 @@ export default function OnboardingPage() {
         const updated = await updateProfile({ skills: selectedSkills });
         setProfile(updated);
         setActiveStep(3);
-      } catch {
-        setError("Your skills could not be saved. Please try again.");
+      } catch (requestError: unknown) {
+        setError(getRequestErrorMessage(requestError, "Your skills could not be saved. Please try again."));
       } finally {
         setSaving(false);
       }
@@ -128,8 +129,8 @@ export default function OnboardingPage() {
           },
         });
         router.replace("/");
-      } catch {
-        setError("Your preferences could not be saved. Please try again.");
+      } catch (requestError: unknown) {
+        setError(getRequestErrorMessage(requestError, "Your preferences could not be saved. Please try again."));
       } finally {
         setSaving(false);
       }
@@ -146,7 +147,7 @@ export default function OnboardingPage() {
   };
 
   if (loading) {
-    return <Box className="workspace-auth-check" role="status"><CircularProgress size={28} /></Box>;
+    return <Loading fullScreen message="Preparing your onboarding" />;
   }
   if (!profile) return null;
 

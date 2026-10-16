@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
 import { Alert, Avatar, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, FormControlLabel, Paper, Stack, Switch, TextField, Typography } from "@mui/material";
 import UploadFileRoundedIcon from "@mui/icons-material/UploadFileRounded";
 import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded";
@@ -11,16 +10,10 @@ import DeleteForeverRoundedIcon from "@mui/icons-material/DeleteForeverRounded";
 import BusinessRoundedIcon from "@mui/icons-material/BusinessRounded";
 import GroupsRoundedIcon from "@mui/icons-material/GroupsRounded";
 import WorkOutlineRoundedIcon from "@mui/icons-material/WorkOutlineRounded";
+import Loading from "@/components/common/Loading";
+import { getRequestErrorMessage, setAccessToken } from "@/services/api";
 import { deleteMyAccount, downloadResume, getProfile, updateProfile, uploadResume } from "@/services/user.service";
-import { setAccessToken } from "@/services/api";
 import type { User } from "@/types/api";
-
-function getRequestErrorMessage(error: unknown, fallback: string) {
-  if (axios.isAxiosError<{ message?: unknown }>(error) && typeof error.response?.data?.message === "string") {
-    return error.response.data.message;
-  }
-  return error instanceof Error ? error.message : fallback;
-}
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -48,8 +41,8 @@ export default function ProfilePage() {
         setInitialProfile(data);
         setSkillsInput((data.skills || []).join(", "));
       })
-      .catch(() => {
-        if (active) setError("Your profile could not be loaded. Please refresh and try again.");
+      .catch((requestError: unknown) => {
+        if (active) setError(getRequestErrorMessage(requestError, "Your profile could not be loaded. Please refresh and try again."));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -124,8 +117,8 @@ export default function ProfilePage() {
       setInitialProfile(updated);
       setSkillsInput((updated.skills || []).join(", "));
       setSaved(true);
-    } catch {
-      setError("Your changes could not be saved. Please try again.");
+    } catch (requestError: unknown) {
+      setError(getRequestErrorMessage(requestError, "Your changes could not be saved. Please try again."));
     } finally {
       setSaving(false);
     }
@@ -172,8 +165,8 @@ export default function ProfilePage() {
       anchor.download = profile?.resume?.split("/").pop() || "AIMarg-resume";
       anchor.click();
       URL.revokeObjectURL(url);
-    } catch {
-      setError("Your resume could not be downloaded.");
+    } catch (requestError: unknown) {
+      setError(getRequestErrorMessage(requestError, "Your resume could not be downloaded."));
     } finally {
       setDownloading(false);
     }
@@ -204,8 +197,8 @@ export default function ProfilePage() {
         privacySettings: updated.privacySettings,
         notificationPreferences: updated.notificationPreferences,
       } : updated);
-    } catch {
-      setError("Your privacy and notification settings could not be saved. Please try again.");
+    } catch (requestError: unknown) {
+      setError(getRequestErrorMessage(requestError, "Your privacy and notification settings could not be saved. Please try again."));
     } finally {
       setSettingsSaving(false);
     }
@@ -219,8 +212,8 @@ export default function ProfilePage() {
       await deleteMyAccount();
       setAccessToken(null);
       router.replace("/auth/login");
-    } catch {
-      setError("Your account could not be deleted. Please try again.");
+    } catch (requestError: unknown) {
+      setError(getRequestErrorMessage(requestError, "Your account could not be deleted. Please try again."));
       setDeletingAccount(false);
       setDeleteDialogOpen(false);
       setDeleteConfirmation("");
@@ -261,7 +254,7 @@ export default function ProfilePage() {
       </Box>
 
       {error && <Alert severity="error" onClose={() => setError("")}>{error}</Alert>}
-      {loading ? <Box className="loading-state"><CircularProgress size={25} /></Box> : profile && (
+      {loading ? <Box className="loading-state"><Loading message="Loading your profile..." /></Box> : profile && (
         <>
           {isHRProfile && (
             <Paper className="hr-profile-summary" elevation={0}>
@@ -332,6 +325,17 @@ export default function ProfilePage() {
                   <TextField label="LinkedIn URL" placeholder="https://linkedin.com/in/your-name" value={profile.linkedinUrl || ""} onChange={(event) => updateField("linkedinUrl", event.target.value)} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
                   <TextField label="GitHub URL" placeholder="https://github.com/your-username" value={profile.githubUrl || ""} onChange={(event) => updateField("githubUrl", event.target.value)} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
                   <TextField label={isHRProfile ? "About your HR role" : "Role description"} placeholder={isHRProfile ? "Describe your hiring focus and how you support candidates" : "Describe your role and responsibilities"} value={profile.jobDescription || ""} onChange={(event) => updateField("jobDescription", event.target.value)} required multiline minRows={3} className="profile-description-field" fullWidth slotProps={{ inputLabel: { shrink: true } }} />
+
+
+                </Box>
+                <Typography variant="body2" color="text.secondary" style={{ backgroundColor:  'transparent !important', marginTop: '8px', marginBottom: '0px', color:  hasChanges ? 'red' : 'blue' }}>
+                  {saved ? <><CheckRoundedIcon fontSize="small" /> Changes saved</> : hasChanges ? "You have unsaved changes" : "All changes are up to date"}
+                </Typography>
+                <Box className="profile-save-bar">
+
+                  <Button variant="contained" onClick={() => void saveProfile()} disabled={(!hasChanges && !hasSkillsChanges) || saving}>
+                    {saving ? <CircularProgress size={18} color="inherit" /> : "Save profile"}
+                  </Button>
                 </Box>
               </Paper>
             </Stack>
@@ -432,8 +436,10 @@ export default function ProfilePage() {
               </Paper>
               <Paper className="profile-section" elevation={0}>
                 <Typography className="impact-overview-label">DANGER ZONE</Typography>
-                <Typography variant="h3">Delete account</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1.5 }}>
+                {/* <Typography variant="h3" style={{ backgroundColor: 'transparent !important' }} className="section-title">
+                  Delete account
+                </Typography> */}
+                <Typography variant="body2" sx={{ mt: 0.5, mb: 1.5, backgroundColor: 'transparent !important', color: 'blue' }}>
                   Permanently delete your account and associated career data. This cannot be undone.
                 </Typography>
                 <Button
@@ -448,15 +454,7 @@ export default function ProfilePage() {
             </Stack>
           </Box>
 
-          <Divider />
-          <Box className="profile-save-bar">
-            <Typography variant="body2" color="text.secondary">
-              {saved ? <><CheckRoundedIcon fontSize="small" /> Changes saved</> : hasChanges ? "You have unsaved changes" : "All changes are up to date"}
-            </Typography>
-            <Button variant="contained" onClick={() => void saveProfile()} disabled={(!hasChanges && !hasSkillsChanges) || saving}>
-              {saving ? <CircularProgress size={18} color="inherit" /> : "Save profile"}
-            </Button>
-          </Box>
+
         </>
       )}
       <Dialog
